@@ -778,6 +778,63 @@ export class KnowledgeGraphManager {
       relations: contextRelations
     };
   }
+
+  // Enhancement 10: List conversations (agent threads)
+  async listConversations(): Promise<{
+    conversations: Array<{
+      agentThreadId: string;
+      entityCount: number;
+      relationCount: number;
+      lastUpdated: string;
+      firstCreated: string;
+    }>;
+  }> {
+    const graph = await this.loadGraph();
+    
+    // Group data by agent thread
+    const threadMap = new Map<string, {
+      entities: Entity[];
+      relations: Relation[];
+      timestamps: string[];
+    }>();
+    
+    // Collect entities by thread
+    for (const entity of graph.entities) {
+      if (!threadMap.has(entity.agentThreadId)) {
+        threadMap.set(entity.agentThreadId, { entities: [], relations: [], timestamps: [] });
+      }
+      const threadData = threadMap.get(entity.agentThreadId)!;
+      threadData.entities.push(entity);
+      threadData.timestamps.push(entity.timestamp);
+    }
+    
+    // Collect relations by thread
+    for (const relation of graph.relations) {
+      if (!threadMap.has(relation.agentThreadId)) {
+        threadMap.set(relation.agentThreadId, { entities: [], relations: [], timestamps: [] });
+      }
+      const threadData = threadMap.get(relation.agentThreadId)!;
+      threadData.relations.push(relation);
+      threadData.timestamps.push(relation.timestamp);
+    }
+    
+    // Build conversation summaries
+    const conversations = Array.from(threadMap.entries()).map(([agentThreadId, data]) => {
+      const timestamps = data.timestamps.sort();
+      return {
+        agentThreadId,
+        entityCount: data.entities.length,
+        relationCount: data.relations.length,
+        firstCreated: timestamps[0] || '',
+        lastUpdated: timestamps[timestamps.length - 1] || ''
+      };
+    });
+    
+    // Sort by last updated (most recent first)
+    conversations.sort((a, b) => b.lastUpdated.localeCompare(a.lastUpdated));
+    
+    return { conversations };
+  }
 }
 
 let knowledgeGraphManager: KnowledgeGraphManager;
@@ -806,7 +863,7 @@ const RelationSchema = z.object({
 // The server instance and tools exposed to Claude
 const server = new McpServer({
   name: "memory-enhanced-server",
-  version: "0.1.0",
+  version: "0.2.0",
 });
 
 // Register create_entities tool
@@ -1275,6 +1332,32 @@ server.registerTool(
     return {
       content: [{ type: "text" as const, text: JSON.stringify(context, null, 2) }],
       structuredContent: { ...context }
+    };
+  }
+);
+
+// Register list_conversations tool
+server.registerTool(
+  "list_conversations",
+  {
+    title: "List Conversations",
+    description: "List all available agent threads (conversations) with their metadata including entity counts, relation counts, and activity timestamps",
+    inputSchema: {},
+    outputSchema: {
+      conversations: z.array(z.object({
+        agentThreadId: z.string(),
+        entityCount: z.number(),
+        relationCount: z.number(),
+        firstCreated: z.string(),
+        lastUpdated: z.string()
+      }))
+    }
+  },
+  async () => {
+    const result = await knowledgeGraphManager.listConversations();
+    return {
+      content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
+      structuredContent: result
     };
   }
 );

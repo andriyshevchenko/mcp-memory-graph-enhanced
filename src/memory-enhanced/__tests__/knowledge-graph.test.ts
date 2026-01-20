@@ -666,4 +666,234 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
       expect(threadFiles[0]).toBe('thread-thread-001.jsonl');
     });
   });
+
+  describe('listConversations', () => {
+    it('should return empty array when no conversations exist', async () => {
+      const result = await manager.listConversations();
+      expect(result.conversations).toHaveLength(0);
+    });
+
+    it('should list single conversation with correct metadata', async () => {
+      await manager.createEntities([
+        {
+          name: 'Alice',
+          entityType: 'person',
+          observations: ['works at Acme'],
+          agentThreadId: 'thread-001',
+          timestamp: '2024-01-20T10:00:00Z',
+          confidence: 0.95,
+          importance: 0.8
+        },
+        {
+          name: 'Bob',
+          entityType: 'person',
+          observations: ['likes programming'],
+          agentThreadId: 'thread-001',
+          timestamp: '2024-01-20T12:00:00Z',
+          confidence: 0.9,
+          importance: 0.7
+        }
+      ]);
+
+      await manager.createRelations([
+        {
+          from: 'Alice',
+          to: 'Bob',
+          relationType: 'knows',
+          agentThreadId: 'thread-001',
+          timestamp: '2024-01-20T11:00:00Z',
+          confidence: 0.9,
+          importance: 0.8
+        }
+      ]);
+
+      const result = await manager.listConversations();
+      expect(result.conversations).toHaveLength(1);
+      expect(result.conversations[0]).toEqual({
+        agentThreadId: 'thread-001',
+        entityCount: 2,
+        relationCount: 1,
+        firstCreated: '2024-01-20T10:00:00Z',
+        lastUpdated: '2024-01-20T12:00:00Z'
+      });
+    });
+
+    it('should list multiple conversations sorted by last updated', async () => {
+      // Create entities in thread-001
+      await manager.createEntities([
+        {
+          name: 'Alice',
+          entityType: 'person',
+          observations: ['works at Acme'],
+          agentThreadId: 'thread-001',
+          timestamp: '2024-01-20T10:00:00Z',
+          confidence: 0.95,
+          importance: 0.8
+        }
+      ]);
+
+      // Create entities in thread-002 (more recent)
+      await manager.createEntities([
+        {
+          name: 'Bob',
+          entityType: 'person',
+          observations: ['likes programming'],
+          agentThreadId: 'thread-002',
+          timestamp: '2024-01-20T15:00:00Z',
+          confidence: 0.9,
+          importance: 0.7
+        },
+        {
+          name: 'Charlie',
+          entityType: 'person',
+          observations: ['data scientist'],
+          agentThreadId: 'thread-002',
+          timestamp: '2024-01-20T16:00:00Z',
+          confidence: 0.85,
+          importance: 0.6
+        }
+      ]);
+
+      // Create entities in thread-003
+      await manager.createEntities([
+        {
+          name: 'Dave',
+          entityType: 'person',
+          observations: ['designer'],
+          agentThreadId: 'thread-003',
+          timestamp: '2024-01-20T12:00:00Z',
+          confidence: 0.88,
+          importance: 0.65
+        }
+      ]);
+
+      const result = await manager.listConversations();
+      expect(result.conversations).toHaveLength(3);
+      
+      // Should be sorted by last updated (most recent first)
+      expect(result.conversations[0].agentThreadId).toBe('thread-002');
+      expect(result.conversations[0].entityCount).toBe(2);
+      expect(result.conversations[0].lastUpdated).toBe('2024-01-20T16:00:00Z');
+      
+      expect(result.conversations[1].agentThreadId).toBe('thread-003');
+      expect(result.conversations[1].entityCount).toBe(1);
+      
+      expect(result.conversations[2].agentThreadId).toBe('thread-001');
+      expect(result.conversations[2].entityCount).toBe(1);
+    });
+
+    it('should count both entities and relations from the same thread', async () => {
+      await manager.createEntities([
+        {
+          name: 'Alice',
+          entityType: 'person',
+          observations: ['works at Acme'],
+          agentThreadId: 'thread-001',
+          timestamp: '2024-01-20T10:00:00Z',
+          confidence: 0.95,
+          importance: 0.8
+        },
+        {
+          name: 'Bob',
+          entityType: 'person',
+          observations: ['likes programming'],
+          agentThreadId: 'thread-001',
+          timestamp: '2024-01-20T11:00:00Z',
+          confidence: 0.9,
+          importance: 0.7
+        },
+        {
+          name: 'Charlie',
+          entityType: 'person',
+          observations: ['data scientist'],
+          agentThreadId: 'thread-001',
+          timestamp: '2024-01-20T12:00:00Z',
+          confidence: 0.85,
+          importance: 0.6
+        }
+      ]);
+
+      await manager.createRelations([
+        {
+          from: 'Alice',
+          to: 'Bob',
+          relationType: 'knows',
+          agentThreadId: 'thread-001',
+          timestamp: '2024-01-20T13:00:00Z',
+          confidence: 0.9,
+          importance: 0.8
+        },
+        {
+          from: 'Bob',
+          to: 'Charlie',
+          relationType: 'works_with',
+          agentThreadId: 'thread-001',
+          timestamp: '2024-01-20T14:00:00Z',
+          confidence: 0.85,
+          importance: 0.75
+        }
+      ]);
+
+      const result = await manager.listConversations();
+      expect(result.conversations).toHaveLength(1);
+      expect(result.conversations[0]).toEqual({
+        agentThreadId: 'thread-001',
+        entityCount: 3,
+        relationCount: 2,
+        firstCreated: '2024-01-20T10:00:00Z',
+        lastUpdated: '2024-01-20T14:00:00Z'
+      });
+    });
+
+    it('should handle threads with only relations (no entities from that thread)', async () => {
+      // Create entities in thread-001
+      await manager.createEntities([
+        {
+          name: 'Alice',
+          entityType: 'person',
+          observations: ['works at Acme'],
+          agentThreadId: 'thread-001',
+          timestamp: '2024-01-20T10:00:00Z',
+          confidence: 0.95,
+          importance: 0.8
+        },
+        {
+          name: 'Bob',
+          entityType: 'person',
+          observations: ['likes programming'],
+          agentThreadId: 'thread-001',
+          timestamp: '2024-01-20T11:00:00Z',
+          confidence: 0.9,
+          importance: 0.7
+        }
+      ]);
+
+      // Create relation in thread-002 (different thread)
+      await manager.createRelations([
+        {
+          from: 'Alice',
+          to: 'Bob',
+          relationType: 'knows',
+          agentThreadId: 'thread-002',
+          timestamp: '2024-01-20T12:00:00Z',
+          confidence: 0.9,
+          importance: 0.8
+        }
+      ]);
+
+      const result = await manager.listConversations();
+      expect(result.conversations).toHaveLength(2);
+      
+      const thread001 = result.conversations.find(c => c.agentThreadId === 'thread-001');
+      const thread002 = result.conversations.find(c => c.agentThreadId === 'thread-002');
+      
+      expect(thread001).toBeDefined();
+      expect(thread001?.entityCount).toBe(2);
+      expect(thread001?.relationCount).toBe(0);
+      
+      expect(thread002).toBeDefined();
+      expect(thread002?.entityCount).toBe(0);
+      expect(thread002?.relationCount).toBe(1);
+    });
+  });
 });

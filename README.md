@@ -69,15 +69,16 @@ The server stores data in separate JSONL files per agent thread:
 12. **get_recent_changes**: Retrieve entities and relations created/modified since a specific timestamp
 13. **prune_memory**: Remove old or low-importance entities to manage memory size
 14. **bulk_update**: Efficiently update multiple entities at once (confidence, importance, observations)
+15. **list_conversations**: List all available agent threads (conversations) with metadata including entity counts, relation counts, and activity timestamps
 
 ### Relationship Intelligence
-15. **find_relation_path**: Find the shortest path of relationships between two entities (useful for "how are they connected?")
-16. **get_context**: Retrieve entities and relations related to specified entities up to a certain depth
+16. **find_relation_path**: Find the shortest path of relationships between two entities (useful for "how are they connected?")
+17. **get_context**: Retrieve entities and relations related to specified entities up to a certain depth
 
 ### Quality & Review
-17. **detect_conflicts**: Detect potentially conflicting observations using pattern matching and negation detection
-18. **flag_for_review**: Mark entities for human review with a specific reason (Human-in-the-Loop)
-19. **get_flagged_entities**: Retrieve all entities flagged for review
+18. **detect_conflicts**: Detect potentially conflicting observations using pattern matching and negation detection
+19. **flag_for_review**: Mark entities for human review with a specific reason (Human-in-the-Loop)
+20. **get_flagged_entities**: Retrieve all entities flagged for review
 
 ## Usage
 
@@ -145,6 +146,10 @@ await queryNodes({
 // Get memory statistics
 await getMemoryStats();
 // Returns: { entityCount, relationCount, threadCount, entityTypes, avgConfidence, avgImportance, recentActivity }
+
+// List all conversations (agent threads)
+await listConversations();
+// Returns: { conversations: [{ agentThreadId, entityCount, relationCount, firstCreated, lastUpdated }, ...] }
 
 // Get recent changes since last interaction
 await getRecentChanges({ since: "2024-01-20T10:00:00Z" });
