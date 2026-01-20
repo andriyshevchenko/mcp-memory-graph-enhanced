@@ -1398,9 +1398,11 @@ async function main() {
     });
     
     // MCP endpoint for StreamableHTTP transport - handles both GET and POST
+    // createMcpExpressApp already adds express.json() middleware, so req.body is available
     app.all('/mcp', async (req, res) => {
       try {
-        await transport.handleRequest(req, res);
+        // Pass the parsed body from express.json() middleware to handleRequest
+        await transport.handleRequest(req, res, req.body);
       } catch (error) {
         console.error('Error handling MCP request:', error);
         if (!res.headersSent) {
