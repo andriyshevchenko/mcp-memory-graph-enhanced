@@ -1,5 +1,5 @@
 {
-  "name": "@modelcontextprotocol/servers",
+  "name": "@mcborov01/servers",
   "private": true,
   "version": "0.6.2",
   "description": "Model Context Protocol servers",
@@ -19,10 +19,10 @@
     "link-all": "npm link --workspaces"
   },
   "dependencies": {
-    "@modelcontextprotocol/server-everything": "*",
-    "@modelcontextprotocol/server-memory": "*",
-    "@modelcontextprotocol/server-memory-enhanced": "*",
-    "@modelcontextprotocol/server-filesystem": "*",
-    "@modelcontextprotocol/server-sequential-thinking": "*"
+    "@mcborov01/server-everything": "*",
+    "@mcborov01/server-memory": "*",
+    "@mcborov01/server-memory-enhanced": "*",
+    "@mcborov01/server-filesystem": "*",
+    "@mcborov01/server-sequential-thinking": "*"
   }
 }

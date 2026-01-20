@@ -1,15 +1,15 @@
 {
-  "name": "@modelcontextprotocol/server-filesystem",
+  "name": "@mcborov01/server-filesystem",
   "version": "0.6.3",
   "description": "MCP server for filesystem access",
   "license": "MIT",
-  "mcpName": "io.github.modelcontextprotocol/server-filesystem",
+  "mcpName": "io.github.andriyshevchenko/server-filesystem",
   "author": "Anthropic, PBC (https://anthropic.com)",
   "homepage": "https://modelcontextprotocol.io",
-  "bugs": "https://github.com/modelcontextprotocol/servers/issues",
+  "bugs": "https://github.com/andriyshevchenko/servers/issues",
   "repository": {
     "type": "git",
-    "url": "https://github.com/modelcontextprotocol/servers.git"
+    "url": "https://github.com/andriyshevchenko/servers.git"
   },
   "type": "module",
   "bin": {
