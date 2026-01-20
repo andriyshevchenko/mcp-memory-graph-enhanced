@@ -2,7 +2,7 @@
   "name": "@modelcontextprotocol/servers",
   "private": true,
   "version": "0.6.2",
-  "description": "Model Context Protocol servers",
+  "description": "Memory-Enhanced MCP Server - Persistent knowledge graph with agent threading",
   "license": "MIT",
   "author": "Anthropic, PBC (https://anthropic.com)",
   "homepage": "https://modelcontextprotocol.io",
