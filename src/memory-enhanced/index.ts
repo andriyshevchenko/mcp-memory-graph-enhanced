@@ -863,8 +863,9 @@ export class KnowledgeGraphManager {
       };
     }
 
-    // Note: Simple sentence splitting - may count abbreviations (e.g., "Mr.", "U.S.A.") as sentence ends
-    // This is intentional to keep validation simple and encourage truly atomic observations
+    // Note: Simple sentence splitting - may count abbreviations (e.g., "Mr.", "U.S.A.") as sentence ends.
+    // This is intentional per spec to keep validation simple and encourage truly atomic observations.
+    // Better to occasionally reject valid content than to allow complex multi-fact observations.
     const sentences = obs.split(/[.!?]/).filter(s => s.trim().length > 0);
     if (sentences.length > MAX_SENTENCES) {
       return {
@@ -1022,8 +1023,9 @@ export class KnowledgeGraphManager {
       // Initialize observationsV2 if not exists
       if (!entity.observationsV2) {
         // Migrate legacy observations to versioned format
+        const migrationBaseTime = Date.now();
         entity.observationsV2 = entity.observations.map((content, idx) => ({
-          id: `obs_${Date.now()}_${idx}`,
+          id: `obs_${migrationBaseTime}_${idx}`,
           content,
           timestamp: entity.timestamp,
           version: 1,
@@ -1034,12 +1036,14 @@ export class KnowledgeGraphManager {
       }
 
       const addedObservations: Observation[] = [];
+      let obsCounter = 0;
+      const addTime = Date.now();
       for (const content of o.contents) {
         // Check if observation already exists
         const existing = entity.observationsV2.find(obs => obs.content === content);
         if (!existing) {
           const newObs: Observation = {
-            id: `obs_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+            id: `obs_${addTime}_${obsCounter++}`,
             content,
             timestamp: o.timestamp,
             version: 1,
@@ -1121,11 +1125,11 @@ export class KnowledgeGraphManager {
     const relations = graph.relations.filter(r => r.agentThreadId === threadId);
 
     // 1. Recent changes (last 10, chronological)
-    // Note: Determining created vs updated requires tracking entity creation time separately from last update
-    // For now, we use the timestamp field which may reflect either creation or last update
+    // Note: Perfect created vs updated detection would require separate createdAt/updatedAt timestamps.
+    // Current heuristic: Check if any observation has version > 1 (indicating update).
+    // Limitation: Multiple version-1 observations or non-observation updates won't be detected as updates.
     const recent_changes = entities
       .map(e => {
-        // If entity has observationsV2 with multiple versions, it's been updated
         const hasMultipleVersions = e.observationsV2 && e.observationsV2.some(obs => obs.version > 1);
         return {
           entityName: e.name,
