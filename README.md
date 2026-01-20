@@ -290,7 +290,7 @@ Alternatively, you can run the server as an HTTP service:
 
 1. Start the HTTP server:
 ```bash
-npx @modelcontextprotocol/server-memory-enhanced-http
+npx mcp-server-memory-enhanced-http
 ```
 
 2. Configure Claude Desktop to connect via HTTP:
