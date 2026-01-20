@@ -863,6 +863,8 @@ export class KnowledgeGraphManager {
       };
     }
 
+    // Note: Simple sentence splitting - may count abbreviations (e.g., "Mr.", "U.S.A.") as sentence ends
+    // This is intentional to keep validation simple and encourage truly atomic observations
     const sentences = obs.split(/[.!?]/).filter(s => s.trim().length > 0);
     if (sentences.length > MAX_SENTENCES) {
       return {
@@ -1037,7 +1039,7 @@ export class KnowledgeGraphManager {
         const existing = entity.observationsV2.find(obs => obs.content === content);
         if (!existing) {
           const newObs: Observation = {
-            id: `obs_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            id: `obs_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
             content,
             timestamp: o.timestamp,
             version: 1,
@@ -1119,13 +1121,19 @@ export class KnowledgeGraphManager {
     const relations = graph.relations.filter(r => r.agentThreadId === threadId);
 
     // 1. Recent changes (last 10, chronological)
+    // Note: Determining created vs updated requires tracking entity creation time separately from last update
+    // For now, we use the timestamp field which may reflect either creation or last update
     const recent_changes = entities
-      .map(e => ({
-        entityName: e.name,
-        entityType: e.entityType,
-        lastModified: e.timestamp,
-        changeType: 'updated' as 'created' | 'updated' // Simplified for now
-      }))
+      .map(e => {
+        // If entity has observationsV2 with multiple versions, it's been updated
+        const hasMultipleVersions = e.observationsV2 && e.observationsV2.some(obs => obs.version > 1);
+        return {
+          entityName: e.name,
+          entityType: e.entityType,
+          lastModified: e.timestamp,
+          changeType: hasMultipleVersions ? 'updated' as const : 'created' as const
+        };
+      })
       .sort((a, b) => b.lastModified.localeCompare(a.lastModified))
       .slice(0, 10);
 
