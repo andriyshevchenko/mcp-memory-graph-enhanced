@@ -30,11 +30,24 @@ export async function ensureMemoryDirectory(): Promise<string> {
 // Initialize memory directory path (will be set during startup)
 let MEMORY_DIR_PATH: string;
 
+// Observation with versioning support
+export interface Observation {
+  id: string;
+  content: string;
+  timestamp: string;
+  version: number;
+  supersedes?: string; // ID of previous observation (if updated)
+  agentThreadId: string;
+  confidence: number;
+  importance: number;
+}
+
 // Enhanced entity with metadata
 export interface Entity {
   name: string;
   entityType: string;
-  observations: string[];
+  observations: string[]; // Legacy: string array for backward compatibility
+  observationsV2?: Observation[]; // New: versioned observations
   agentThreadId: string;
   timestamp: string;
   confidence: number;
@@ -92,6 +105,7 @@ export class KnowledgeGraphManager {
             name: item.name,
             entityType: item.entityType,
             observations: item.observations,
+            observationsV2: item.observationsV2, // Support new versioned observations
             agentThreadId: item.agentThreadId,
             timestamp: item.timestamp,
             confidence: item.confidence,
@@ -148,6 +162,7 @@ export class KnowledgeGraphManager {
         name: e.name,
         entityType: e.entityType,
         observations: e.observations,
+        observationsV2: e.observationsV2, // Save versioned observations
         agentThreadId: e.agentThreadId,
         timestamp: e.timestamp,
         confidence: e.confidence,
@@ -835,6 +850,359 @@ export class KnowledgeGraphManager {
     
     return { conversations };
   }
+
+  // Phase 1: Validation functions for save_memory
+  validateObservation(obs: string): { valid: boolean; error?: string } {
+    const MAX_LENGTH = 150;
+    const MAX_SENTENCES = 2;
+
+    if (obs.length > MAX_LENGTH) {
+      return {
+        valid: false,
+        error: `Observation too long (${obs.length} chars). Max ${MAX_LENGTH}. Split into multiple observations.`
+      };
+    }
+
+    const sentences = obs.split(/[.!?]/).filter(s => s.trim().length > 0);
+    if (sentences.length > MAX_SENTENCES) {
+      return {
+        valid: false,
+        error: `Too many sentences (${sentences.length}). Max ${MAX_SENTENCES}. One fact per observation.`
+      };
+    }
+
+    return { valid: true };
+  }
+
+  validateEntityType(entityType: string): { warnings: string[] } {
+    const warnings: string[] = [];
+
+    // Check if starts with lowercase
+    if (entityType.length > 0 && entityType[0] === entityType[0].toLowerCase()) {
+      warnings.push(`Entity type '${entityType}' starts with lowercase. Consider '${entityType[0].toUpperCase() + entityType.slice(1)}' (convention: capitalize first letter)`);
+    }
+
+    // Check for spaces
+    if (entityType.includes(' ')) {
+      warnings.push(`Entity type '${entityType}' contains spaces. Consider using camelCase or removing spaces.`);
+    }
+
+    return { warnings };
+  }
+
+  // Phase 1: save_memory implementation
+  async saveMemory(input: {
+    entities: Array<{
+      name: string;
+      entityType: string;
+      observations: string[];
+      relations: Array<{
+        targetEntity: string;
+        relationType: string;
+        importance?: number;
+      }>;
+      confidence?: number;
+      importance?: number;
+    }>;
+    threadId: string;
+  }): Promise<{
+    success: boolean;
+    created: { entities: number; relations: number };
+    warnings: string[];
+    quality_score: number;
+    validation_errors?: string[];
+  }> {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+    const timestamp = new Date().toISOString();
+
+    // Validate all entities and observations first
+    for (const entity of input.entities) {
+      // Validate entity has at least one relation
+      if (!entity.relations || entity.relations.length === 0) {
+        errors.push(`Entity '${entity.name}' must have at least 1 relation`);
+      }
+
+      // Validate each observation
+      for (const obs of entity.observations) {
+        const validation = this.validateObservation(obs);
+        if (!validation.valid) {
+          errors.push(`Entity '${entity.name}': ${validation.error}`);
+        }
+      }
+
+      // Validate entity type (soft validation)
+      const typeValidation = this.validateEntityType(entity.entityType);
+      warnings.push(...typeValidation.warnings);
+
+      // Validate relation targets exist in the same request
+      const entityNames = new Set(input.entities.map(e => e.name));
+      for (const rel of entity.relations) {
+        if (!entityNames.has(rel.targetEntity)) {
+          errors.push(`Entity '${entity.name}': Target entity '${rel.targetEntity}' not found in request. All relations must reference entities in the same save_memory call.`);
+        }
+      }
+    }
+
+    // If validation failed, return errors
+    if (errors.length > 0) {
+      return {
+        success: false,
+        created: { entities: 0, relations: 0 },
+        warnings,
+        quality_score: 0,
+        validation_errors: errors
+      };
+    }
+
+    // Create entities
+    const entitiesToCreate: Entity[] = input.entities.map(e => ({
+      name: e.name,
+      entityType: e.entityType,
+      observations: e.observations,
+      agentThreadId: input.threadId,
+      timestamp,
+      confidence: e.confidence ?? 1.0,
+      importance: e.importance ?? 0.5
+    }));
+
+    const createdEntities = await this.createEntities(entitiesToCreate);
+
+    // Create relations
+    const relationsToCreate: Relation[] = [];
+    for (const entity of input.entities) {
+      for (const rel of entity.relations) {
+        relationsToCreate.push({
+          from: entity.name,
+          to: rel.targetEntity,
+          relationType: rel.relationType,
+          agentThreadId: input.threadId,
+          timestamp,
+          confidence: 1.0,
+          importance: rel.importance ?? 0.7
+        });
+      }
+    }
+
+    const createdRelations = await this.createRelations(relationsToCreate);
+
+    // Calculate quality score
+    const avgRelationsPerEntity = relationsToCreate.length / input.entities.length;
+    const quality_score = Math.min(1.0, avgRelationsPerEntity / 3); // 3+ relations = perfect score
+
+    return {
+      success: true,
+      created: {
+        entities: createdEntities.length,
+        relations: createdRelations.length
+      },
+      warnings,
+      quality_score
+    };
+  }
+
+  // Phase 2: Add observations with versioning
+  async addObservationsV2(observations: {
+    entityName: string;
+    contents: string[];
+    agentThreadId: string;
+    timestamp: string;
+    confidence: number;
+    importance: number;
+  }[]): Promise<{ entityName: string; addedObservations: Observation[] }[]> {
+    const graph = await this.loadGraph();
+    const results = observations.map(o => {
+      const entity = graph.entities.find(e => e.name === o.entityName);
+      if (!entity) {
+        throw new Error(`Entity with name ${o.entityName} not found`);
+      }
+
+      // Initialize observationsV2 if not exists
+      if (!entity.observationsV2) {
+        // Migrate legacy observations to versioned format
+        entity.observationsV2 = entity.observations.map((content, idx) => ({
+          id: `obs_${Date.now()}_${idx}`,
+          content,
+          timestamp: entity.timestamp,
+          version: 1,
+          agentThreadId: entity.agentThreadId,
+          confidence: entity.confidence,
+          importance: entity.importance
+        }));
+      }
+
+      const addedObservations: Observation[] = [];
+      for (const content of o.contents) {
+        // Check if observation already exists
+        const existing = entity.observationsV2.find(obs => obs.content === content);
+        if (!existing) {
+          const newObs: Observation = {
+            id: `obs_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            content,
+            timestamp: o.timestamp,
+            version: 1,
+            agentThreadId: o.agentThreadId,
+            confidence: o.confidence,
+            importance: o.importance
+          };
+          entity.observationsV2.push(newObs);
+          addedObservations.push(newObs);
+
+          // Also add to legacy observations array for backward compatibility
+          if (!entity.observations.includes(content)) {
+            entity.observations.push(content);
+          }
+        }
+      }
+
+      // Update metadata
+      entity.timestamp = o.timestamp;
+      entity.confidence = o.confidence;
+      entity.importance = o.importance;
+
+      return { entityName: o.entityName, addedObservations };
+    });
+
+    await this.saveGraph(graph);
+    return results;
+  }
+
+  // Phase 2: Get observation history
+  async getObservationHistory(entityName: string): Promise<{
+    entityName: string;
+    observations: Observation[];
+  }> {
+    const graph = await this.loadGraph();
+    const entity = graph.entities.find(e => e.name === entityName);
+
+    if (!entity) {
+      throw new Error(`Entity with name ${entityName} not found`);
+    }
+
+    // Return all observations with version history
+    return {
+      entityName,
+      observations: entity.observationsV2 || []
+    };
+  }
+
+  // Phase 3: Get analytics
+  async getAnalytics(threadId: string): Promise<{
+    recent_changes: Array<{
+      entityName: string;
+      entityType: string;
+      lastModified: string;
+      changeType: 'created' | 'updated';
+    }>;
+    top_important: Array<{
+      entityName: string;
+      entityType: string;
+      importance: number;
+      observationCount: number;
+    }>;
+    most_connected: Array<{
+      entityName: string;
+      entityType: string;
+      relationCount: number;
+      connectedTo: string[];
+    }>;
+    orphaned_entities: Array<{
+      entityName: string;
+      entityType: string;
+      reason: 'no_relations' | 'broken_relation';
+    }>;
+  }> {
+    const graph = await this.loadGraph();
+
+    // Filter by threadId
+    const entities = graph.entities.filter(e => e.agentThreadId === threadId);
+    const relations = graph.relations.filter(r => r.agentThreadId === threadId);
+
+    // 1. Recent changes (last 10, chronological)
+    const recent_changes = entities
+      .map(e => ({
+        entityName: e.name,
+        entityType: e.entityType,
+        lastModified: e.timestamp,
+        changeType: 'updated' as 'created' | 'updated' // Simplified for now
+      }))
+      .sort((a, b) => b.lastModified.localeCompare(a.lastModified))
+      .slice(0, 10);
+
+    // 2. Top by importance (top 10)
+    const top_important = entities
+      .map(e => ({
+        entityName: e.name,
+        entityType: e.entityType,
+        importance: e.importance,
+        observationCount: e.observations.length
+      }))
+      .sort((a, b) => b.importance - a.importance)
+      .slice(0, 10);
+
+    // 3. Most connected entities (top 10)
+    const relationCounts = new Map<string, Set<string>>();
+    for (const rel of relations) {
+      if (!relationCounts.has(rel.from)) {
+        relationCounts.set(rel.from, new Set());
+      }
+      relationCounts.get(rel.from)!.add(rel.to);
+
+      if (!relationCounts.has(rel.to)) {
+        relationCounts.set(rel.to, new Set());
+      }
+      relationCounts.get(rel.to)!.add(rel.from);
+    }
+
+    const most_connected = entities
+      .map(e => ({
+        entityName: e.name,
+        entityType: e.entityType,
+        relationCount: relationCounts.get(e.name)?.size || 0,
+        connectedTo: Array.from(relationCounts.get(e.name) || [])
+      }))
+      .sort((a, b) => b.relationCount - a.relationCount)
+      .slice(0, 10);
+
+    // 4. Orphaned entities (no relations or broken relations)
+    const entityNames = new Set(entities.map(e => e.name));
+    const orphaned_entities: Array<{
+      entityName: string;
+      entityType: string;
+      reason: 'no_relations' | 'broken_relation';
+    }> = [];
+
+    for (const entity of entities) {
+      const hasRelations = relations.some(r => r.from === entity.name || r.to === entity.name);
+      if (!hasRelations) {
+        orphaned_entities.push({
+          entityName: entity.name,
+          entityType: entity.entityType,
+          reason: 'no_relations'
+        });
+      } else {
+        // Check for broken relations
+        const entityRelations = relations.filter(r => r.from === entity.name || r.to === entity.name);
+        const hasBrokenRelation = entityRelations.some(r => 
+          !entityNames.has(r.from) || !entityNames.has(r.to)
+        );
+        if (hasBrokenRelation) {
+          orphaned_entities.push({
+            entityName: entity.name,
+            entityType: entity.entityType,
+            reason: 'broken_relation'
+          });
+        }
+      }
+    }
+
+    return {
+      recent_changes,
+      top_important,
+      most_connected,
+      orphaned_entities
+    };
+  }
 }
 
 let knowledgeGraphManager: KnowledgeGraphManager;
@@ -866,12 +1234,12 @@ const server = new McpServer({
   version: "0.2.0",
 });
 
-// Register create_entities tool
+// Register create_entities tool (DEPRECATED - use save_memory instead)
 server.registerTool(
   "create_entities",
   {
-    title: "Create Entities",
-    description: "Create multiple new entities in the knowledge graph with metadata (agent thread ID, timestamp, confidence, importance)",
+    title: "Create Entities (DEPRECATED)",
+    description: "[DEPRECATED: Use save_memory instead] Create multiple new entities in the knowledge graph with metadata (agent thread ID, timestamp, confidence, importance)",
     inputSchema: {
       entities: z.array(EntitySchema)
     },
@@ -888,12 +1256,12 @@ server.registerTool(
   }
 );
 
-// Register create_relations tool
+// Register create_relations tool (DEPRECATED - use save_memory instead)
 server.registerTool(
   "create_relations",
   {
-    title: "Create Relations",
-    description: "Create multiple new relations between entities in the knowledge graph with metadata (agent thread ID, timestamp, confidence, importance). Relations should be in active voice",
+    title: "Create Relations (DEPRECATED)",
+    description: "[DEPRECATED: Use save_memory instead] Create multiple new relations between entities in the knowledge graph with metadata (agent thread ID, timestamp, confidence, importance). Relations should be in active voice",
     inputSchema: {
       relations: z.array(RelationSchema)
     },
@@ -906,6 +1274,47 @@ server.registerTool(
     return {
       content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
       structuredContent: { relations: result }
+    };
+  }
+);
+
+// Phase 1: Register save_memory tool (NEW - recommended approach)
+server.registerTool(
+  "save_memory",
+  {
+    title: "Save Memory (Recommended)",
+    description: "Save entities and their relations to memory graph in a single atomic operation. RULES: 1) Each observation max 150 chars (atomic facts only). 2) Each entity MUST have at least 1 relation. This is the recommended way to save memory.",
+    inputSchema: {
+      entities: z.array(z.object({
+        name: z.string().min(1).max(100).describe("The name of the entity"),
+        entityType: z.string().min(1).max(50).describe("Type of entity (e.g., Person, Document, File, or custom types like Patient, API). Convention: start with capital letter."),
+        observations: z.array(z.string().min(5).max(150)).min(1).describe("Array of atomic facts. Each must be ONE fact, max 150 chars."),
+        relations: z.array(z.object({
+          targetEntity: z.string().describe("Name of entity to connect to (must exist in this request)"),
+          relationType: z.string().max(50).describe("Type of relationship (e.g., 'created by', 'contains', 'uses')"),
+          importance: z.number().min(0).max(1).optional().default(0.7).describe("Importance of this relation (0-1)")
+        })).min(1).describe("REQUIRED: Every entity must have at least 1 relation"),
+        confidence: z.number().min(0).max(1).optional().default(1.0).describe("Confidence in this entity (0-1)"),
+        importance: z.number().min(0).max(1).optional().default(0.5).describe("Importance of this entity (0-1)")
+      })).min(1),
+      threadId: z.string().min(1).describe("Thread ID for this conversation/project")
+    },
+    outputSchema: {
+      success: z.boolean(),
+      created: z.object({
+        entities: z.number(),
+        relations: z.number()
+      }),
+      warnings: z.array(z.string()),
+      quality_score: z.number().min(0).max(1),
+      validation_errors: z.array(z.string()).optional()
+    }
+  },
+  async ({ entities, threadId }) => {
+    const result = await knowledgeGraphManager.saveMemory({ entities, threadId });
+    return {
+      content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
+      structuredContent: result
     };
   }
 );
@@ -1355,6 +1764,82 @@ server.registerTool(
   },
   async () => {
     const result = await knowledgeGraphManager.listConversations();
+    return {
+      content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
+      structuredContent: result
+    };
+  }
+);
+
+// Phase 2: Register get_observation_history tool
+server.registerTool(
+  "get_observation_history",
+  {
+    title: "Get Observation History",
+    description: "Retrieve version history of all observations for an entity, including superseded observations",
+    inputSchema: {
+      entityName: z.string().describe("The name of the entity to get observation history for")
+    },
+    outputSchema: {
+      entityName: z.string(),
+      observations: z.array(z.object({
+        id: z.string(),
+        content: z.string(),
+        timestamp: z.string(),
+        version: z.number(),
+        supersedes: z.string().optional(),
+        agentThreadId: z.string(),
+        confidence: z.number(),
+        importance: z.number()
+      }))
+    }
+  },
+  async ({ entityName }) => {
+    const result = await knowledgeGraphManager.getObservationHistory(entityName);
+    return {
+      content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
+      structuredContent: result
+    };
+  }
+);
+
+// Phase 3: Register get_analytics tool
+server.registerTool(
+  "get_analytics",
+  {
+    title: "Get Analytics",
+    description: "Get analytics and insights for a specific thread including recent changes, most important entities, most connected entities, and orphaned entities",
+    inputSchema: {
+      threadId: z.string().describe("The agent thread ID to get analytics for")
+    },
+    outputSchema: {
+      recent_changes: z.array(z.object({
+        entityName: z.string(),
+        entityType: z.string(),
+        lastModified: z.string(),
+        changeType: z.enum(['created', 'updated'])
+      })),
+      top_important: z.array(z.object({
+        entityName: z.string(),
+        entityType: z.string(),
+        importance: z.number(),
+        observationCount: z.number()
+      })),
+      most_connected: z.array(z.object({
+        entityName: z.string(),
+        entityType: z.string(),
+        relationCount: z.number(),
+        connectedTo: z.array(z.string())
+      })),
+      orphaned_entities: z.array(z.object({
+        entityName: z.string(),
+        entityType: z.string(),
+        reason: z.enum(['no_relations', 'broken_relation'])
+      }))
+    }
+  },
+  async ({ threadId }) => {
+    const result = await knowledgeGraphManager.getAnalytics(threadId);
     return {
       content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
       structuredContent: result

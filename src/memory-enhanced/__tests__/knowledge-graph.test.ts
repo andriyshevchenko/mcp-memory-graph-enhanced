@@ -896,4 +896,451 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
       expect(thread002?.relationCount).toBe(1);
     });
   });
+
+  // Phase 1: Tests for save_memory
+  describe('saveMemory (Phase 1)', () => {
+    it('should successfully save entities with relations', async () => {
+      const result = await manager.saveMemory({
+        entities: [
+          {
+            name: 'Alice',
+            entityType: 'Person',
+            observations: ['Works at Acme Corp', 'Lives in New York'],
+            relations: [
+              { targetEntity: 'Project X', relationType: 'works on' }
+            ],
+            confidence: 0.95,
+            importance: 0.8
+          },
+          {
+            name: 'Project X',
+            entityType: 'Project',
+            observations: ['AI project', 'Started in 2024'],
+            relations: [
+              { targetEntity: 'Alice', relationType: 'led by' }
+            ]
+          }
+        ],
+        threadId: 'thread-001'
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.created.entities).toBe(2);
+      expect(result.created.relations).toBe(2);
+      expect(result.quality_score).toBeGreaterThan(0);
+      expect(result.warnings).toBeInstanceOf(Array);
+
+      const graph = await manager.readGraph();
+      expect(graph.entities).toHaveLength(2);
+      expect(graph.relations).toHaveLength(2);
+    });
+
+    it('should reject observations that are too long', async () => {
+      const result = await manager.saveMemory({
+        entities: [
+          {
+            name: 'Test Entity',
+            entityType: 'Test',
+            observations: [
+              'This is a very long observation that exceeds the maximum allowed length of 150 characters which should cause validation to fail and return an error message to the user'
+            ],
+            relations: [
+              { targetEntity: 'Other Entity', relationType: 'related to' }
+            ]
+          },
+          {
+            name: 'Other Entity',
+            entityType: 'Test',
+            observations: ['Short observation'],
+            relations: [
+              { targetEntity: 'Test Entity', relationType: 'related to' }
+            ]
+          }
+        ],
+        threadId: 'thread-001'
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.validation_errors).toBeDefined();
+      expect(result.validation_errors?.length).toBeGreaterThan(0);
+      expect(result.validation_errors?.[0]).toContain('too long');
+    });
+
+    it('should reject observations with too many sentences', async () => {
+      const result = await manager.saveMemory({
+        entities: [
+          {
+            name: 'Test Entity',
+            entityType: 'Test',
+            observations: [
+              'First sentence. Second sentence. Third sentence.'
+            ],
+            relations: [
+              { targetEntity: 'Other Entity', relationType: 'related to' }
+            ]
+          },
+          {
+            name: 'Other Entity',
+            entityType: 'Test',
+            observations: ['Short observation'],
+            relations: [
+              { targetEntity: 'Test Entity', relationType: 'related to' }
+            ]
+          }
+        ],
+        threadId: 'thread-001'
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.validation_errors).toBeDefined();
+      expect(result.validation_errors?.length).toBeGreaterThan(0);
+      expect(result.validation_errors?.[0]).toContain('Too many sentences');
+    });
+
+    it('should reject entities without relations', async () => {
+      const result = await manager.saveMemory({
+        entities: [
+          {
+            name: 'Isolated Entity',
+            entityType: 'Test',
+            observations: ['Some fact'],
+            relations: []
+          }
+        ],
+        threadId: 'thread-001'
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.validation_errors).toBeDefined();
+      expect(result.validation_errors?.[0]).toContain('must have at least 1 relation');
+    });
+
+    it('should reject relations to non-existent entities in request', async () => {
+      const result = await manager.saveMemory({
+        entities: [
+          {
+            name: 'Entity A',
+            entityType: 'Test',
+            observations: ['Some fact'],
+            relations: [
+              { targetEntity: 'NonExistent', relationType: 'related to' }
+            ]
+          }
+        ],
+        threadId: 'thread-001'
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.validation_errors).toBeDefined();
+      expect(result.validation_errors?.[0]).toContain('not found in request');
+    });
+
+    it('should warn about lowercase entity types', async () => {
+      const result = await manager.saveMemory({
+        entities: [
+          {
+            name: 'Entity A',
+            entityType: 'person',
+            observations: ['Some fact'],
+            relations: [
+              { targetEntity: 'Entity B', relationType: 'knows' }
+            ]
+          },
+          {
+            name: 'Entity B',
+            entityType: 'person',
+            observations: ['Another fact'],
+            relations: [
+              { targetEntity: 'Entity A', relationType: 'knows' }
+            ]
+          }
+        ],
+        threadId: 'thread-001'
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.warnings.length).toBeGreaterThan(0);
+      expect(result.warnings.some(w => w.includes('lowercase'))).toBe(true);
+    });
+
+    it('should calculate quality score based on relations', async () => {
+      const resultLowQuality = await manager.saveMemory({
+        entities: [
+          {
+            name: 'Entity A',
+            entityType: 'Test',
+            observations: ['Fact'],
+            relations: [
+              { targetEntity: 'Entity B', relationType: 'related' }
+            ]
+          },
+          {
+            name: 'Entity B',
+            entityType: 'Test',
+            observations: ['Fact'],
+            relations: [
+              { targetEntity: 'Entity A', relationType: 'related' }
+            ]
+          }
+        ],
+        threadId: 'thread-001'
+      });
+
+      const resultHighQuality = await manager.saveMemory({
+        entities: [
+          {
+            name: 'Entity C',
+            entityType: 'Test',
+            observations: ['Fact'],
+            relations: [
+              { targetEntity: 'Entity D', relationType: 'rel1' },
+              { targetEntity: 'Entity E', relationType: 'rel2' },
+              { targetEntity: 'Entity F', relationType: 'rel3' }
+            ]
+          },
+          {
+            name: 'Entity D',
+            entityType: 'Test',
+            observations: ['Fact'],
+            relations: [
+              { targetEntity: 'Entity C', relationType: 'rel' }
+            ]
+          },
+          {
+            name: 'Entity E',
+            entityType: 'Test',
+            observations: ['Fact'],
+            relations: [
+              { targetEntity: 'Entity C', relationType: 'rel' }
+            ]
+          },
+          {
+            name: 'Entity F',
+            entityType: 'Test',
+            observations: ['Fact'],
+            relations: [
+              { targetEntity: 'Entity C', relationType: 'rel' }
+            ]
+          }
+        ],
+        threadId: 'thread-002'
+      });
+
+      expect(resultLowQuality.quality_score).toBeLessThan(resultHighQuality.quality_score);
+    });
+  });
+
+  // Phase 2: Tests for observation versioning
+  describe('addObservationsV2 and getObservationHistory (Phase 2)', () => {
+    it('should add observations with versioning', async () => {
+      await manager.createEntities([
+        {
+          name: 'Entity A',
+          entityType: 'Test',
+          observations: ['Initial observation'],
+          agentThreadId: 'thread-001',
+          timestamp: '2024-01-20T10:00:00Z',
+          confidence: 0.9,
+          importance: 0.7
+        }
+      ]);
+
+      const result = await manager.addObservationsV2([
+        {
+          entityName: 'Entity A',
+          contents: ['New observation 1', 'New observation 2'],
+          agentThreadId: 'thread-001',
+          timestamp: '2024-01-20T11:00:00Z',
+          confidence: 0.95,
+          importance: 0.8
+        }
+      ]);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].entityName).toBe('Entity A');
+      expect(result[0].addedObservations).toHaveLength(2);
+      expect(result[0].addedObservations[0].version).toBe(1);
+      expect(result[0].addedObservations[0].id).toBeDefined();
+    });
+
+    it('should retrieve observation history', async () => {
+      await manager.createEntities([
+        {
+          name: 'Entity B',
+          entityType: 'Test',
+          observations: ['Original fact'],
+          agentThreadId: 'thread-001',
+          timestamp: '2024-01-20T10:00:00Z',
+          confidence: 0.9,
+          importance: 0.7
+        }
+      ]);
+
+      await manager.addObservationsV2([
+        {
+          entityName: 'Entity B',
+          contents: ['Updated fact'],
+          agentThreadId: 'thread-001',
+          timestamp: '2024-01-20T11:00:00Z',
+          confidence: 0.95,
+          importance: 0.8
+        }
+      ]);
+
+      const history = await manager.getObservationHistory('Entity B');
+      expect(history.entityName).toBe('Entity B');
+      expect(history.observations).toBeDefined();
+      expect(history.observations.length).toBeGreaterThan(0);
+    });
+
+    it('should throw error for non-existent entity', async () => {
+      await expect(
+        manager.getObservationHistory('NonExistent')
+      ).rejects.toThrow('not found');
+    });
+  });
+
+  // Phase 3: Tests for analytics
+  describe('getAnalytics (Phase 3)', () => {
+    beforeEach(async () => {
+      // Create test data
+      await manager.createEntities([
+        {
+          name: 'Alice',
+          entityType: 'Person',
+          observations: ['Works at Acme', 'Senior engineer'],
+          agentThreadId: 'thread-001',
+          timestamp: '2024-01-20T10:00:00Z',
+          confidence: 0.95,
+          importance: 0.9
+        },
+        {
+          name: 'Bob',
+          entityType: 'Person',
+          observations: ['Junior developer'],
+          agentThreadId: 'thread-001',
+          timestamp: '2024-01-20T11:00:00Z',
+          confidence: 0.9,
+          importance: 0.5
+        },
+        {
+          name: 'Project X',
+          entityType: 'Project',
+          observations: ['AI initiative'],
+          agentThreadId: 'thread-001',
+          timestamp: '2024-01-20T12:00:00Z',
+          confidence: 0.8,
+          importance: 0.8
+        },
+        {
+          name: 'Orphan Entity',
+          entityType: 'Test',
+          observations: ['No relations'],
+          agentThreadId: 'thread-001',
+          timestamp: '2024-01-20T13:00:00Z',
+          confidence: 0.7,
+          importance: 0.3
+        }
+      ]);
+
+      await manager.createRelations([
+        {
+          from: 'Alice',
+          to: 'Project X',
+          relationType: 'leads',
+          agentThreadId: 'thread-001',
+          timestamp: '2024-01-20T14:00:00Z',
+          confidence: 0.9,
+          importance: 0.8
+        },
+        {
+          from: 'Bob',
+          to: 'Project X',
+          relationType: 'works on',
+          agentThreadId: 'thread-001',
+          timestamp: '2024-01-20T14:01:00Z',
+          confidence: 0.9,
+          importance: 0.7
+        },
+        {
+          from: 'Alice',
+          to: 'Bob',
+          relationType: 'mentors',
+          agentThreadId: 'thread-001',
+          timestamp: '2024-01-20T14:02:00Z',
+          confidence: 0.85,
+          importance: 0.6
+        }
+      ]);
+    });
+
+    it('should return recent changes', async () => {
+      const analytics = await manager.getAnalytics('thread-001');
+      
+      expect(analytics.recent_changes).toBeDefined();
+      expect(analytics.recent_changes.length).toBeGreaterThan(0);
+      expect(analytics.recent_changes[0]).toHaveProperty('entityName');
+      expect(analytics.recent_changes[0]).toHaveProperty('entityType');
+      expect(analytics.recent_changes[0]).toHaveProperty('lastModified');
+      expect(analytics.recent_changes[0]).toHaveProperty('changeType');
+    });
+
+    it('should return top important entities', async () => {
+      const analytics = await manager.getAnalytics('thread-001');
+      
+      expect(analytics.top_important).toBeDefined();
+      expect(analytics.top_important.length).toBeGreaterThan(0);
+      
+      // Alice should be most important (0.9)
+      expect(analytics.top_important[0].entityName).toBe('Alice');
+      expect(analytics.top_important[0].importance).toBe(0.9);
+      expect(analytics.top_important[0]).toHaveProperty('observationCount');
+    });
+
+    it('should return most connected entities', async () => {
+      const analytics = await manager.getAnalytics('thread-001');
+      
+      expect(analytics.most_connected).toBeDefined();
+      expect(analytics.most_connected.length).toBeGreaterThan(0);
+      
+      // Alice should be most connected (connected to Bob and Project X)
+      expect(analytics.most_connected[0].entityName).toBe('Alice');
+      expect(analytics.most_connected[0].relationCount).toBe(2);
+      expect(analytics.most_connected[0].connectedTo).toContain('Bob');
+      expect(analytics.most_connected[0].connectedTo).toContain('Project X');
+    });
+
+    it('should identify orphaned entities', async () => {
+      const analytics = await manager.getAnalytics('thread-001');
+      
+      expect(analytics.orphaned_entities).toBeDefined();
+      expect(analytics.orphaned_entities.length).toBeGreaterThan(0);
+      
+      // Orphan Entity should be identified
+      const orphan = analytics.orphaned_entities.find(e => e.entityName === 'Orphan Entity');
+      expect(orphan).toBeDefined();
+      expect(orphan?.reason).toBe('no_relations');
+    });
+
+    it('should only return analytics for specified thread', async () => {
+      // Create entity in different thread
+      await manager.createEntities([
+        {
+          name: 'Charlie',
+          entityType: 'Person',
+          observations: ['From another thread'],
+          agentThreadId: 'thread-002',
+          timestamp: '2024-01-20T15:00:00Z',
+          confidence: 0.9,
+          importance: 0.9
+        }
+      ]);
+
+      const analytics = await manager.getAnalytics('thread-001');
+      
+      // Charlie should not appear in thread-001 analytics
+      expect(analytics.recent_changes.some(e => e.entityName === 'Charlie')).toBe(false);
+      expect(analytics.top_important.some(e => e.entityName === 'Charlie')).toBe(false);
+    });
+  });
 });
