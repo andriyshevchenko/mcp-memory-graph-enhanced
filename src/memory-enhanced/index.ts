@@ -59,6 +59,8 @@ export interface KnowledgeGraph {
 
 // The KnowledgeGraphManager class contains all operations to interact with the knowledge graph
 export class KnowledgeGraphManager {
+  private static readonly NEGATION_WORDS = ['not', 'no', 'never', 'neither', 'none', 'doesn\'t', 'don\'t', 'isn\'t', 'aren\'t'];
+  
   constructor(private memoryDirPath: string) {}
 
   private getThreadFilePath(agentThreadId: string): string {
@@ -521,23 +523,20 @@ export class KnowledgeGraphManager {
     for (const entity of graph.entities) {
       const entityConflicts: { obs1: string; obs2: string; reason: string }[] = [];
       
-      // Simple conflict detection: look for negations or contradictions
-      const negationWords = ['not', 'no', 'never', 'neither', 'none', 'doesn\'t', 'don\'t', 'isn\'t', 'aren\'t'];
-      
       for (let i = 0; i < entity.observations.length; i++) {
         for (let j = i + 1; j < entity.observations.length; j++) {
           const obs1 = entity.observations[i].toLowerCase();
           const obs2 = entity.observations[j].toLowerCase();
           
           // Check for negation patterns
-          const obs1HasNegation = negationWords.some(word => obs1.includes(word));
-          const obs2HasNegation = negationWords.some(word => obs2.includes(word));
+          const obs1HasNegation = KnowledgeGraphManager.NEGATION_WORDS.some(word => obs1.includes(word));
+          const obs2HasNegation = KnowledgeGraphManager.NEGATION_WORDS.some(word => obs2.includes(word));
           
           // If one has negation and they share key words, might be a conflict
           if (obs1HasNegation !== obs2HasNegation) {
             const words1 = obs1.split(/\s+/).filter(w => w.length > 3);
-            const words2 = obs2.split(/\s+/).filter(w => w.length > 3);
-            const commonWords = words1.filter(w => words2.includes(w) && !negationWords.includes(w));
+            const words2Set = new Set(obs2.split(/\s+/).filter(w => w.length > 3));
+            const commonWords = words1.filter(w => words2Set.has(w) && !KnowledgeGraphManager.NEGATION_WORDS.includes(w));
             
             if (commonWords.length >= 2) {
               entityConflicts.push({
@@ -1195,7 +1194,7 @@ server.registerTool(
       relations: z.array(RelationSchema)
     }
   },
-  async ({ entityNames, depth }: { entityNames: string[]; depth?: number }) => {
+  async ({ entityNames, depth }) => {
     const context = await knowledgeGraphManager.getContext(entityNames, depth || 1);
     return {
       content: [{ type: "text" as const, text: JSON.stringify(context, null, 2) }],
