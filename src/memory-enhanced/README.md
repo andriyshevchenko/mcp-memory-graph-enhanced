@@ -52,6 +52,7 @@ The server stores data in separate JSONL files per agent thread:
 
 ## Available Tools
 
+### Core Operations
 1. **create_entities**: Create new entities with metadata (including importance)
 2. **create_relations**: Create relationships between entities with metadata (including importance)
 3. **add_observations**: Add observations to existing entities with metadata (including importance)
@@ -62,6 +63,21 @@ The server stores data in separate JSONL files per agent thread:
 8. **search_nodes**: Search entities by name, type, or observation content
 9. **open_nodes**: Retrieve specific entities by name
 10. **query_nodes**: Advanced querying with range-based filtering by timestamp, confidence, and importance
+
+### Memory Management & Insights
+11. **get_memory_stats**: Get comprehensive statistics (entity counts, thread activity, avg confidence/importance, recent activity)
+12. **get_recent_changes**: Retrieve entities and relations created/modified since a specific timestamp
+13. **prune_memory**: Remove old or low-importance entities to manage memory size
+14. **bulk_update**: Efficiently update multiple entities at once (confidence, importance, observations)
+
+### Relationship Intelligence
+15. **find_relation_path**: Find the shortest path of relationships between two entities (useful for "how are they connected?")
+16. **get_context**: Retrieve entities and relations related to specified entities up to a certain depth
+
+### Quality & Review
+17. **detect_conflicts**: Detect potentially conflicting observations using pattern matching and negation detection
+18. **flag_for_review**: Mark entities for human review with a specific reason (Human-in-the-Loop)
+19. **get_flagged_entities**: Retrieve all entities flagged for review
 
 ## Usage
 
@@ -125,6 +141,36 @@ await queryNodes({
   confidenceMin: 0.8,
   importanceMin: 0.7  // Only get important items
 });
+
+// Get memory statistics
+await getMemoryStats();
+// Returns: { entityCount, relationCount, threadCount, entityTypes, avgConfidence, avgImportance, recentActivity }
+
+// Get recent changes since last interaction
+await getRecentChanges({ since: "2024-01-20T10:00:00Z" });
+
+// Find how two entities are connected
+await findRelationPath({ from: "Alice", to: "Charlie", maxDepth: 5 });
+
+// Get context around specific entities
+await getContext({ entityNames: ["Alice", "Bob"], depth: 2 });
+
+// Detect conflicting observations
+await detectConflicts();
+
+// Flag entity for human review
+await flagForReview({ entityName: "Alice", reason: "Uncertain data", reviewer: "John" });
+
+// Bulk update multiple entities
+await bulkUpdate({
+  updates: [
+    { entityName: "Alice", importance: 0.95 },
+    { entityName: "Bob", confidence: 0.85, addObservations: ["updated info"] }
+  ]
+});
+
+// Prune old/unimportant data
+await pruneMemory({ olderThan: "2024-01-01T00:00:00Z", importanceLessThan: 0.3, keepMinEntities: 100 });
 ```
 
 ## Development
