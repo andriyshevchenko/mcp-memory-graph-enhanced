@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { KnowledgeGraphManager, Entity, Relation, KnowledgeGraph } from '../index.js';
+import { KnowledgeGraphManager, Entity, Relation } from '../index.js';
 
 describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
   let manager: KnowledgeGraphManager;
@@ -620,6 +620,50 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
       
       expect(result.entities).toHaveLength(0);
       expect(result.relations).toHaveLength(0);
+    });
+  });
+
+  describe('Cross-thread operations', () => {
+    it('should maintain single entity when observations added from different thread', async () => {
+      // Thread-001 creates entity
+      await manager.createEntities([
+        {
+          name: 'Alice',
+          entityType: 'person',
+          observations: ['works at Acme'],
+          agentThreadId: 'thread-001',
+          timestamp: '2024-01-20T10:00:00Z',
+          confidence: 0.95,
+          importance: 0.8
+        }
+      ]);
+
+      // Thread-002 adds observations to Alice
+      await manager.addObservations([
+        {
+          entityName: 'Alice',
+          contents: ['lives in SF', 'loves coffee'],
+          agentThreadId: 'thread-002',
+          timestamp: '2024-01-20T10:05:00Z',
+          confidence: 0.92,
+          importance: 0.75
+        }
+      ]);
+
+      // Verify only one Alice entity exists
+      const graph = await manager.readGraph();
+      expect(graph.entities).toHaveLength(1);
+      expect(graph.entities[0].name).toBe('Alice');
+      expect(graph.entities[0].observations).toHaveLength(3);
+      
+      // Original agentThreadId should be preserved (thread-001)
+      expect(graph.entities[0].agentThreadId).toBe('thread-001');
+      
+      // Verify only one thread file was created (thread-001)
+      const files = await fs.readdir(testDirPath);
+      const threadFiles = files.filter(f => f.startsWith('thread-') && f.endsWith('.jsonl'));
+      expect(threadFiles).toHaveLength(1);
+      expect(threadFiles[0]).toBe('thread-thread-001.jsonl');
     });
   });
 });

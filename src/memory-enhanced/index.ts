@@ -70,7 +70,14 @@ export class KnowledgeGraphManager {
       const data = await fs.readFile(filePath, "utf-8");
       const lines = data.split("\n").filter(line => line.trim() !== "");
       return lines.reduce((graph: KnowledgeGraph, line) => {
-        const item = JSON.parse(line);
+        let item: any;
+        try {
+          item = JSON.parse(line);
+        } catch (parseError) {
+          console.warn(`Skipping malformed JSON line in ${filePath}: ${line.substring(0, 100)}...`, parseError);
+          return graph;
+        }
+        
         if (item.type === "entity") {
           graph.entities.push({
             name: item.name,
@@ -141,6 +148,17 @@ export class KnowledgeGraphManager {
         importance: r.importance
       })),
     ];
+    
+    // Avoid creating or keeping empty files when there is no data for this thread
+    if (lines.length === 0) {
+      try {
+        await fs.unlink(threadFilePath);
+      } catch {
+        // Ignore errors (e.g., file does not exist)
+      }
+      return;
+    }
+    
     await fs.writeFile(threadFilePath, lines.join("\n"));
   }
 
@@ -203,9 +221,9 @@ export class KnowledgeGraphManager {
       }
       const newObservations = o.contents.filter(content => !entity.observations.includes(content));
       entity.observations.push(...newObservations);
-      // Update metadata if observations were added
+      // Update metadata if observations were added, but keep original agentThreadId
+      // to maintain thread file consistency and avoid orphaned data
       if (newObservations.length > 0) {
-        entity.agentThreadId = o.agentThreadId;
         entity.timestamp = o.timestamp;
         entity.confidence = o.confidence;
         entity.importance = o.importance;
