@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install package dependencies
+        run: npm ci
+        working-directory: src/memory-enhanced
+
+      - name: Run TypeScript type checking
+        run: npx tsc --noEmit
+        working-directory: src/memory-enhanced
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install package dependencies
+        run: npm ci
+        working-directory: src/memory-enhanced
+
+      - name: Build package
+        run: npm run build
+        working-directory: src/memory-enhanced
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: src/memory-enhanced/dist/
+          retention-days: 1
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install package dependencies
+        run: npm ci
+        working-directory: src/memory-enhanced
+
+      - name: Run tests
+        run: npm test
+        working-directory: src/memory-enhanced
