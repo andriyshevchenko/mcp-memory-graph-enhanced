@@ -59,7 +59,7 @@ export interface KnowledgeGraph {
 
 // The KnowledgeGraphManager class contains all operations to interact with the knowledge graph
 export class KnowledgeGraphManager {
-  private static readonly NEGATION_WORDS = ['not', 'no', 'never', 'neither', 'none', 'doesn\'t', 'don\'t', 'isn\'t', 'aren\'t'];
+  private static readonly NEGATION_WORDS = new Set(['not', 'no', 'never', 'neither', 'none', 'doesn\'t', 'don\'t', 'isn\'t', 'aren\'t']);
   
   constructor(private memoryDirPath: string) {}
 
@@ -81,6 +81,13 @@ export class KnowledgeGraphManager {
         }
         
         if (item.type === "entity") {
+          // Validate required fields
+          if (!item.name || !item.entityType || !Array.isArray(item.observations) || 
+              !item.agentThreadId || !item.timestamp || 
+              typeof item.confidence !== 'number' || typeof item.importance !== 'number') {
+            console.warn(`Skipping entity with missing required fields in ${filePath}`);
+            return graph;
+          }
           graph.entities.push({
             name: item.name,
             entityType: item.entityType,
@@ -92,6 +99,13 @@ export class KnowledgeGraphManager {
           });
         }
         if (item.type === "relation") {
+          // Validate required fields
+          if (!item.from || !item.to || !item.relationType || 
+              !item.agentThreadId || !item.timestamp || 
+              typeof item.confidence !== 'number' || typeof item.importance !== 'number') {
+            console.warn(`Skipping relation with missing required fields in ${filePath}`);
+            return graph;
+          }
           graph.relations.push({
             from: item.from,
             to: item.to,
@@ -191,6 +205,36 @@ export class KnowledgeGraphManager {
         this.saveGraphForThread(threadId, data.entities, data.relations)
       )
     );
+    
+    // Clean up stale thread files that no longer have data
+    try {
+      const files = await fs.readdir(this.memoryDirPath).catch(() => []);
+      const threadFiles = files.filter(f => f.startsWith('thread-') && f.endsWith('.jsonl'));
+      
+      await Promise.all(
+        threadFiles.map(async (fileName) => {
+          // Extract threadId from filename: thread-{agentThreadId}.jsonl
+          const match = fileName.match(/^thread-(.+)\.jsonl$/);
+          if (match) {
+            const threadId = match[1];
+            if (!threadMap.has(threadId)) {
+              const filePath = path.join(this.memoryDirPath, fileName);
+              try {
+                await fs.unlink(filePath);
+              } catch (error) {
+                // Only log non-ENOENT errors
+                if (error instanceof Error && 'code' in error && (error as any).code !== 'ENOENT') {
+                  console.warn(`Failed to delete stale thread file ${filePath}:`, error);
+                }
+              }
+            }
+          }
+        })
+      );
+    } catch (error) {
+      // Best-effort cleanup: log but don't fail the save operation
+      console.warn('Failed to clean up stale thread files:', error);
+    }
   }
 
   async createEntities(entities: Entity[]): Promise<Entity[]> {
@@ -205,9 +249,20 @@ export class KnowledgeGraphManager {
 
   async createRelations(relations: Relation[]): Promise<Relation[]> {
     const graph = await this.loadGraph();
+    
+    // Validate that referenced entities exist
+    const entityNames = new Set(graph.entities.map(e => e.name));
+    const validRelations = relations.filter(r => {
+      if (!entityNames.has(r.from) || !entityNames.has(r.to)) {
+        console.warn(`Skipping relation ${r.from} -> ${r.to}: one or both entities do not exist`);
+        return false;
+      }
+      return true;
+    });
+    
     // Relations are globally unique by (from, to, relationType) across all threads
     // This enables multiple threads to collaboratively build the knowledge graph
-    const newRelations = relations.filter(r => !graph.relations.some(existingRelation => 
+    const newRelations = validRelations.filter(r => !graph.relations.some(existingRelation => 
       existingRelation.from === r.from && 
       existingRelation.to === r.to && 
       existingRelation.relationType === r.relationType
@@ -226,13 +281,11 @@ export class KnowledgeGraphManager {
       }
       const newObservations = o.contents.filter(content => !entity.observations.includes(content));
       entity.observations.push(...newObservations);
-      // Update metadata if observations were added, but keep original agentThreadId
+      // Update metadata based on this operation, but keep original agentThreadId
       // to maintain thread file consistency and avoid orphaned data
-      if (newObservations.length > 0) {
-        entity.timestamp = o.timestamp;
-        entity.confidence = o.confidence;
-        entity.importance = o.importance;
-      }
+      entity.timestamp = o.timestamp;
+      entity.confidence = o.confidence;
+      entity.importance = o.importance;
       return { entityName: o.entityName, addedObservations: newObservations };
     });
     await this.saveGraph(graph);
@@ -446,14 +499,12 @@ export class KnowledgeGraphManager {
     const graph = await this.loadGraph();
     const sinceDate = new Date(since);
     
+    // Only return entities and relations that were actually modified since the specified time
     const recentEntities = graph.entities.filter(e => new Date(e.timestamp) >= sinceDate);
     const recentEntityNames = new Set(recentEntities.map(e => e.name));
     
-    const recentRelations = graph.relations.filter(r => 
-      new Date(r.timestamp) >= sinceDate ||
-      recentEntityNames.has(r.from) ||
-      recentEntityNames.has(r.to)
-    );
+    // Only include relations that are recent themselves
+    const recentRelations = graph.relations.filter(r => new Date(r.timestamp) >= sinceDate);
     
     return {
       entities: recentEntities,
@@ -486,9 +537,11 @@ export class KnowledgeGraphManager {
         continue;
       }
       
-      // Find all outgoing relations from current entity
+      // Find all relations connected to current entity (both outgoing and incoming for bidirectional search)
       const outgoing = graph.relations.filter(r => r.from === current.entity);
+      const incoming = graph.relations.filter(r => r.to === current.entity);
       
+      // Check outgoing relations
       for (const rel of outgoing) {
         if (rel.to === to) {
           return {
@@ -503,6 +556,26 @@ export class KnowledgeGraphManager {
           queue.push({
             entity: rel.to,
             path: [...current.path, rel.to],
+            relations: [...current.relations, rel]
+          });
+        }
+      }
+      
+      // Check incoming relations (traverse backwards)
+      for (const rel of incoming) {
+        if (rel.from === to) {
+          return {
+            found: true,
+            path: [...current.path, rel.from],
+            relations: [...current.relations, rel]
+          };
+        }
+        
+        if (!visited.has(rel.from)) {
+          visited.add(rel.from);
+          queue.push({
+            entity: rel.from,
+            path: [...current.path, rel.from],
             relations: [...current.relations, rel]
           });
         }
@@ -529,14 +602,14 @@ export class KnowledgeGraphManager {
           const obs2 = entity.observations[j].toLowerCase();
           
           // Check for negation patterns
-          const obs1HasNegation = KnowledgeGraphManager.NEGATION_WORDS.some(word => obs1.includes(word));
-          const obs2HasNegation = KnowledgeGraphManager.NEGATION_WORDS.some(word => obs2.includes(word));
+          const obs1HasNegation = Array.from(KnowledgeGraphManager.NEGATION_WORDS).some(word => obs1.includes(word));
+          const obs2HasNegation = Array.from(KnowledgeGraphManager.NEGATION_WORDS).some(word => obs2.includes(word));
           
           // If one has negation and they share key words, might be a conflict
           if (obs1HasNegation !== obs2HasNegation) {
             const words1 = obs1.split(/\s+/).filter(w => w.length > 3);
             const words2Set = new Set(obs2.split(/\s+/).filter(w => w.length > 3));
-            const commonWords = words1.filter(w => words2Set.has(w) && !KnowledgeGraphManager.NEGATION_WORDS.includes(w));
+            const commonWords = words1.filter(w => words2Set.has(w) && !KnowledgeGraphManager.NEGATION_WORDS.has(w));
             
             if (commonWords.length >= 2) {
               entityConflicts.push({
@@ -580,13 +653,16 @@ export class KnowledgeGraphManager {
     }
     
     // Ensure we keep minimum entities
+    // If keepMinEntities is set and we need more entities, take from the already-filtered set
+    // sorted by importance and recency
     if (options.keepMinEntities && entitiesToKeep.length < options.keepMinEntities) {
-      // Sort by importance and timestamp, keep the most important and recent
-      const sorted = [...graph.entities].sort((a, b) => {
+      // Sort the filtered entities by importance and timestamp, keep the most important and recent
+      const sorted = [...entitiesToKeep].sort((a, b) => {
         if (a.importance !== b.importance) return b.importance - a.importance;
         return b.timestamp.localeCompare(a.timestamp);
       });
-      entitiesToKeep = sorted.slice(0, options.keepMinEntities);
+      // If we still don't have enough, we keep what we have
+      entitiesToKeep = sorted.slice(0, Math.min(options.keepMinEntities, sorted.length));
     }
     
     const keptEntityNames = new Set(entitiesToKeep.map(e => e.name));
