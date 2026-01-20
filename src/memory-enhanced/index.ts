@@ -840,7 +840,7 @@ export class KnowledgeGraphManager {
 let knowledgeGraphManager: KnowledgeGraphManager;
 
 // Zod schemas for enhanced entities and relations
-const EntitySchema = z.object({
+export const EntitySchema = z.object({
   name: z.string().describe("The name of the entity"),
   entityType: z.string().describe("The type of the entity"),
   observations: z.array(z.string()).describe("An array of observation contents associated with the entity"),
@@ -850,7 +850,7 @@ const EntitySchema = z.object({
   importance: z.number().min(0).max(1).describe("Importance for memory integrity if lost: 0 (not important) to 1 (critical)")
 });
 
-const RelationSchema = z.object({
+export const RelationSchema = z.object({
   from: z.string().describe("The name of the entity where the relation starts"),
   to: z.string().describe("The name of the entity where the relation ends"),
   relationType: z.string().describe("The type of the relation"),

@@ -90,9 +90,52 @@ npm install @modelcontextprotocol/server-memory-enhanced
 
 ### Running the Server
 
+#### Stdio Transport (Default)
+
 ```bash
 npx mcp-server-memory-enhanced
 ```
+
+#### HTTP Transport
+
+```bash
+npx mcp-server-memory-enhanced-http
+```
+
+By default, the HTTP server listens on `http://127.0.0.1:3000`. You can customize the port and host:
+
+```bash
+PORT=8080 HOST=0.0.0.0 npx mcp-server-memory-enhanced-http
+```
+
+The HTTP server uses the MCP Streamable HTTP transport protocol and supports:
+- Session-based connections with automatic session ID management
+- SSE (Server-Sent Events) streaming for real-time updates
+- Standard HTTP POST requests for MCP operations
+
+**HTTP Endpoint**: `POST /mcp`
+
+Example HTTP request:
+```bash
+curl -X POST http://127.0.0.1:3000/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {
+      "protocolVersion": "2024-11-05",
+      "capabilities": {},
+      "clientInfo": {
+        "name": "your-client",
+        "version": "1.0.0"
+      }
+    }
+  }'
+```
+
+The server will return a `mcp-session-id` header that should be included in subsequent requests.
 
 ### Configuration
 
@@ -226,6 +269,8 @@ MEMORY_DIR_PATH=/path/to/memory/directory npx @modelcontextprotocol/server-memor
 
 ### Using with Claude Desktop
 
+#### Stdio Transport
+
 Configure the server in your Claude Desktop configuration:
 
 ```json
@@ -238,6 +283,28 @@ Configure the server in your Claude Desktop configuration:
   }
 }
 ```
+
+#### HTTP Transport
+
+Alternatively, you can run the server as an HTTP service:
+
+1. Start the HTTP server:
+```bash
+npx @modelcontextprotocol/server-memory-enhanced-http
+```
+
+2. Configure Claude Desktop to connect via HTTP:
+```json
+{
+  "mcpServers": {
+    "memory-enhanced": {
+      "url": "http://127.0.0.1:3000/mcp"
+    }
+  }
+}
+```
+
+**Note**: When using HTTP transport, ensure the server is running before starting Claude Desktop.
 
 ## 🛠️ Development
 
