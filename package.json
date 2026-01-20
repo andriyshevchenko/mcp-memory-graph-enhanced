@@ -21,6 +21,7 @@
   "dependencies": {
     "@modelcontextprotocol/server-everything": "*",
     "@modelcontextprotocol/server-memory": "*",
+    "@modelcontextprotocol/server-memory-enhanced": "*",
     "@modelcontextprotocol/server-filesystem": "*",
     "@modelcontextprotocol/server-sequential-thinking": "*"
   }
