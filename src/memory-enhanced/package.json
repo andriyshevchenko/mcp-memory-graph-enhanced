@@ -1,6 +1,6 @@
 {
   "name": "server-memory-enhanced",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "description": "Enhanced MCP server for memory with agent threading, timestamps, and confidence scoring",
   "license": "MIT",
   "mcpName": "io.github.modelcontextprotocol/server-memory-enhanced",

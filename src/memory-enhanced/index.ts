@@ -1243,7 +1243,7 @@ const RelationSchema = z.object({
 // The server instance and tools exposed to Claude
 const server = new McpServer({
   name: "memory-enhanced-server",
-  version: "0.2.0",
+  version: "1.0.0",
 });
 
 // Register create_entities tool (DEPRECATED - use save_memory instead)
