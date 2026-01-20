@@ -1377,6 +1377,7 @@ async function main() {
   const port = parseInt(process.env.PORT || '3000', 10);
   const host = process.env.HOST || '127.0.0.1';
 
+  // Both 'http' and 'sse' use the same StreamableHTTP transport (SSE is part of the HTTP protocol)
   if (transportMode === 'http' || transportMode === 'sse') {
     // HTTP/SSE transport mode
     console.error(`Starting Enhanced Knowledge Graph MCP Server on HTTP (${host}:${port})`);
@@ -1384,8 +1385,9 @@ async function main() {
     const app = createMcpExpressApp({ host });
     
     // Create a single transport instance for StreamableHTTP
+    // Session ID format: session-{timestamp}-{9-char-random-string}
     const transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: () => `session-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
+      sessionIdGenerator: () => `session-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`  // slice(2, 11) gives 9 characters
     });
     
     // Connect server to transport
