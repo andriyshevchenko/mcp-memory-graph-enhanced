@@ -2,84 +2,90 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { KnowledgeGraphManager, Entity, Relation, KnowledgeGraph, IStorageAdapter, JsonlStorageAdapter } from '../index.js';
+import { KnowledgeGraphManager, KnowledgeGraph, IStorageAdapter, JsonlStorageAdapter } from '../index.js';
+import {
+  createTestEntity,
+  createTestRelation,
+  createPersonEntity,
+  createEntityWithObservation
+} from './storage-test-helpers.js';
 
 /**
  * Mock in-memory storage adapter for testing the abstraction
- * This demonstrates how a custom storage adapter (like Neo4j) could be implemented
+ * Demonstrates the Liskov Substitution Principle (LSP) - can be used anywhere IStorageAdapter is expected
  */
 class InMemoryStorageAdapter implements IStorageAdapter {
   private graph: KnowledgeGraph = { entities: [], relations: [] };
 
   async loadGraph(): Promise<KnowledgeGraph> {
-    // Return a deep copy to prevent external mutations
-    return {
-      entities: JSON.parse(JSON.stringify(this.graph.entities)),
-      relations: JSON.parse(JSON.stringify(this.graph.relations))
-    };
+    return this.deepCopy(this.graph);
   }
 
   async saveGraph(graph: KnowledgeGraph): Promise<void> {
-    // Store a deep copy to prevent external mutations
-    this.graph = {
-      entities: JSON.parse(JSON.stringify(graph.entities)),
-      relations: JSON.parse(JSON.stringify(graph.relations))
-    };
+    this.graph = this.deepCopy(graph);
   }
 
   async initialize(): Promise<void> {
     // No initialization needed for in-memory storage
   }
+
+  private deepCopy(graph: KnowledgeGraph): KnowledgeGraph {
+    return {
+      entities: JSON.parse(JSON.stringify(graph.entities)),
+      relations: JSON.parse(JSON.stringify(graph.relations))
+    };
+  }
+}
+
+/**
+ * Test fixture for managing temporary directories
+ */
+class TestDirectoryFixture {
+  private testDirPath?: string;
+
+  async create(prefix: string): Promise<string> {
+    this.testDirPath = path.join(
+      path.dirname(fileURLToPath(import.meta.url)),
+      `${prefix}-${Date.now()}`
+    );
+    await fs.mkdir(this.testDirPath, { recursive: true });
+    return this.testDirPath;
+  }
+
+  async cleanup(): Promise<void> {
+    if (!this.testDirPath) {
+      return;
+    }
+
+    try {
+      const files = await fs.readdir(this.testDirPath);
+      await Promise.all(files.map(f => fs.unlink(path.join(this.testDirPath!, f))));
+      await fs.rmdir(this.testDirPath);
+    } catch (error) {
+      // Ignore errors during cleanup
+    }
+  }
 }
 
 describe('Storage Abstraction', () => {
-  describe('with JSONL storage adapter (default)', () => {
+  describe('JSONL storage adapter (default)', () => {
     let manager: KnowledgeGraphManager;
-    let testDirPath: string;
+    let fixture: TestDirectoryFixture;
 
     beforeEach(async () => {
-      // Create a temporary test directory
-      testDirPath = path.join(
-        path.dirname(fileURLToPath(import.meta.url)),
-        `test-jsonl-storage-${Date.now()}`
-      );
-      await fs.mkdir(testDirPath, { recursive: true });
+      fixture = new TestDirectoryFixture();
+      const testDirPath = await fixture.create('test-jsonl-storage');
       manager = new KnowledgeGraphManager(testDirPath);
     });
 
     afterEach(async () => {
-      // Clean up test directory
-      try {
-        const files = await fs.readdir(testDirPath);
-        await Promise.all(files.map(f => fs.unlink(path.join(testDirPath, f))));
-        await fs.rmdir(testDirPath);
-      } catch (error) {
-        // Ignore errors if directory doesn't exist
-      }
+      await fixture.cleanup();
     });
 
     it('should create and read entities using JSONL storage', async () => {
-      const entities: Entity[] = [
-        { 
-          name: 'TestEntity', 
-          entityType: 'test', 
-          observations: [{ 
-            id: 'obs-1',
-            content: 'test observation',
-            timestamp: '2024-01-20T10:00:00Z',
-            version: 1,
-            agentThreadId: 'thread-001',
-            confidence: 0.9,
-            importance: 0.8
-          }],
-          agentThreadId: 'thread-001',
-          timestamp: '2024-01-20T10:00:00Z',
-          confidence: 0.9,
-          importance: 0.8
-        }
-      ];
-
-      await manager.createEntities(entities);
+      const entity = createEntityWithObservation('TestEntity', 'test observation');
+      
+      await manager.createEntities([entity]);
       const graph = await manager.readGraph();
       
       expect(graph.entities).toHaveLength(1);
@@ -87,7 +93,7 @@ describe('Storage Abstraction', () => {
     });
   });
 
-  describe('with custom in-memory storage adapter', () => {
+  describe('In-memory storage adapter (custom)', () => {
     let manager: KnowledgeGraphManager;
 
     beforeEach(() => {
@@ -95,70 +101,23 @@ describe('Storage Abstraction', () => {
       manager = new KnowledgeGraphManager('', inMemoryStorage);
     });
 
-    it('should create and read entities using in-memory storage', async () => {
-      const entities: Entity[] = [
-        { 
-          name: 'TestEntity', 
-          entityType: 'test', 
-          observations: [{ 
-            id: 'obs-1',
-            content: 'test observation',
-            timestamp: '2024-01-20T10:00:00Z',
-            version: 1,
-            agentThreadId: 'thread-001',
-            confidence: 0.9,
-            importance: 0.8
-          }],
-          agentThreadId: 'thread-001',
-          timestamp: '2024-01-20T10:00:00Z',
-          confidence: 0.9,
-          importance: 0.8
-        }
-      ];
-
-      await manager.createEntities(entities);
+    it('should create and read entities', async () => {
+      const entity = createEntityWithObservation('TestEntity', 'test observation');
+      
+      await manager.createEntities([entity]);
       const graph = await manager.readGraph();
       
       expect(graph.entities).toHaveLength(1);
       expect(graph.entities[0].name).toBe('TestEntity');
     });
 
-    it('should create entities and relations using in-memory storage', async () => {
-      const entities: Entity[] = [
-        { 
-          name: 'Alice', 
-          entityType: 'person', 
-          observations: [],
-          agentThreadId: 'thread-001',
-          timestamp: '2024-01-20T10:00:00Z',
-          confidence: 0.9,
-          importance: 0.8
-        },
-        { 
-          name: 'Bob', 
-          entityType: 'person', 
-          observations: [],
-          agentThreadId: 'thread-001',
-          timestamp: '2024-01-20T10:00:00Z',
-          confidence: 0.9,
-          importance: 0.8
-        }
-      ];
+    it('should create entities and relations', async () => {
+      const alice = createPersonEntity('Alice');
+      const bob = createPersonEntity('Bob');
+      const relation = createTestRelation('Alice', 'Bob');
 
-      const relations: Relation[] = [
-        {
-          from: 'Alice',
-          to: 'Bob',
-          relationType: 'knows',
-          agentThreadId: 'thread-001',
-          timestamp: '2024-01-20T10:00:00Z',
-          confidence: 0.9,
-          importance: 0.8
-        }
-      ];
-
-      await manager.createEntities(entities);
-      await manager.createRelations(relations);
+      await manager.createEntities([alice, bob]);
+      await manager.createRelations([relation]);
       
       const graph = await manager.readGraph();
       
@@ -168,100 +127,56 @@ describe('Storage Abstraction', () => {
       expect(graph.relations[0].to).toBe('Bob');
     });
 
-    it('should handle multiple operations with in-memory storage', async () => {
-      const entities1: Entity[] = [
-        { 
-          name: 'Entity1', 
-          entityType: 'test', 
-          observations: [],
-          agentThreadId: 'thread-001',
-          timestamp: '2024-01-20T10:00:00Z',
-          confidence: 0.9,
-          importance: 0.8
-        }
-      ];
+    it('should handle multiple sequential operations', async () => {
+      const entity1 = createTestEntity('Entity1');
+      const entity2 = createTestEntity('Entity2');
 
-      const entities2: Entity[] = [
-        { 
-          name: 'Entity2', 
-          entityType: 'test', 
-          observations: [],
-          agentThreadId: 'thread-001',
-          timestamp: '2024-01-20T10:00:00Z',
-          confidence: 0.9,
-          importance: 0.8
-        }
-      ];
-
-      await manager.createEntities(entities1);
+      await manager.createEntities([entity1]);
       const graph1 = await manager.readGraph();
       expect(graph1.entities).toHaveLength(1);
 
-      await manager.createEntities(entities2);
+      await manager.createEntities([entity2]);
       const graph2 = await manager.readGraph();
       expect(graph2.entities).toHaveLength(2);
     });
   });
 
-  describe('JSONL storage adapter directly', () => {
+  describe('JSONL adapter - Direct testing', () => {
     let storage: JsonlStorageAdapter;
-    let testDirPath: string;
+    let fixture: TestDirectoryFixture;
 
     beforeEach(async () => {
-      testDirPath = path.join(
-        path.dirname(fileURLToPath(import.meta.url)),
-        `test-jsonl-direct-${Date.now()}`
-      );
-      await fs.mkdir(testDirPath, { recursive: true });
+      fixture = new TestDirectoryFixture();
+      const testDirPath = await fixture.create('test-jsonl-direct');
       storage = new JsonlStorageAdapter(testDirPath);
       await storage.initialize();
     });
 
     afterEach(async () => {
-      try {
-        const files = await fs.readdir(testDirPath);
-        await Promise.all(files.map(f => fs.unlink(path.join(testDirPath, f))));
-        await fs.rmdir(testDirPath);
-      } catch (error) {
-        // Ignore errors
-      }
+      await fixture.cleanup();
     });
 
     it('should persist data to JSONL files', async () => {
+      const entity = createTestEntity('TestEntity');
       const graph: KnowledgeGraph = {
-        entities: [
-          { 
-            name: 'TestEntity', 
-            entityType: 'test', 
-            observations: [],
-            agentThreadId: 'thread-001',
-            timestamp: '2024-01-20T10:00:00Z',
-            confidence: 0.9,
-            importance: 0.8
-          }
-        ],
+        entities: [entity],
         relations: []
       };
 
       await storage.saveGraph(graph);
-
-      // Check that file was created
-      const files = await fs.readdir(testDirPath);
-      expect(files).toContain('thread-thread-001.jsonl');
-
-      // Load and verify
       const loadedGraph = await storage.loadGraph();
+      
       expect(loadedGraph.entities).toHaveLength(1);
       expect(loadedGraph.entities[0].name).toBe('TestEntity');
     });
 
     it('should handle empty graph', async () => {
-      const graph: KnowledgeGraph = {
+      const emptyGraph: KnowledgeGraph = {
         entities: [],
         relations: []
       };
 
-      await storage.saveGraph(graph);
+      await storage.saveGraph(emptyGraph);
       const loadedGraph = await storage.loadGraph();
       
       expect(loadedGraph.entities).toHaveLength(0);

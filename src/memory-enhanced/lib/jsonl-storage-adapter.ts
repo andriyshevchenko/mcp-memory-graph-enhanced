@@ -7,18 +7,192 @@ import path from 'path';
 import { Entity, Relation, KnowledgeGraph } from './types.js';
 import { IStorageAdapter } from './storage-interface.js';
 
+// Constants for file naming and types
+const THREAD_FILE_PREFIX = 'thread-';
+const THREAD_FILE_EXTENSION = '.jsonl';
+const ENTITY_TYPE = 'entity';
+const RELATION_TYPE = 'relation';
+const FILE_NOT_FOUND_ERROR = 'ENOENT';
+
+/**
+ * Represents thread-specific data
+ */
+interface ThreadData {
+  entities: Entity[];
+  relations: Relation[];
+}
+
+/**
+ * Represents a serialized item in JSONL format
+ */
+interface JsonlItem {
+  type: string;
+  [key: string]: any;
+}
+
 /**
  * JSONL-based storage adapter for the knowledge graph
  * Stores data in thread-specific JSONL files
+ * 
+ * Responsibilities:
+ * - File I/O operations for JSONL format
+ * - Thread-based data organization
+ * - Data serialization/deserialization
  */
 export class JsonlStorageAdapter implements IStorageAdapter {
-  constructor(private memoryDirPath: string) {}
+  constructor(private readonly memoryDirPath: string) {}
 
   /**
    * Get the file path for a specific thread
    */
   private getThreadFilePath(agentThreadId: string): string {
-    return path.join(this.memoryDirPath, `thread-${agentThreadId}.jsonl`);
+    return path.join(this.memoryDirPath, `${THREAD_FILE_PREFIX}${agentThreadId}${THREAD_FILE_EXTENSION}`);
+  }
+
+  /**
+   * Check if an item is a valid entity
+   */
+  private isValidEntity(item: JsonlItem): boolean {
+    return item.type === ENTITY_TYPE &&
+           Boolean(item.name) &&
+           Boolean(item.entityType) &&
+           Array.isArray(item.observations) &&
+           Boolean(item.agentThreadId) &&
+           Boolean(item.timestamp) &&
+           typeof item.confidence === 'number' &&
+           typeof item.importance === 'number';
+  }
+
+  /**
+   * Check if an item is a valid relation
+   */
+  private isValidRelation(item: JsonlItem): boolean {
+    return item.type === RELATION_TYPE &&
+           Boolean(item.from) &&
+           Boolean(item.to) &&
+           Boolean(item.relationType) &&
+           Boolean(item.agentThreadId) &&
+           Boolean(item.timestamp) &&
+           typeof item.confidence === 'number' &&
+           typeof item.importance === 'number';
+  }
+
+  /**
+   * Parse and validate a single JSONL line
+   */
+  private parseLine(line: string, filePath: string): JsonlItem | null {
+    try {
+      return JSON.parse(line);
+    } catch (parseError) {
+      console.warn(`Skipping malformed JSON line in ${filePath} (line length: ${line.length} chars)`);
+      return null;
+    }
+  }
+
+  /**
+   * Convert JSONL item to Entity
+   */
+  private toEntity(item: JsonlItem): Entity {
+    return {
+      name: item.name,
+      entityType: item.entityType,
+      observations: item.observations,
+      agentThreadId: item.agentThreadId,
+      timestamp: item.timestamp,
+      confidence: item.confidence,
+      importance: item.importance
+    };
+  }
+
+  /**
+   * Convert JSONL item to Relation
+   */
+  private toRelation(item: JsonlItem): Relation {
+    return {
+      from: item.from,
+      to: item.to,
+      relationType: item.relationType,
+      agentThreadId: item.agentThreadId,
+      timestamp: item.timestamp,
+      confidence: item.confidence,
+      importance: item.importance
+    };
+  }
+
+  /**
+   * Process a single JSONL item and add to graph
+   */
+  private processItem(item: JsonlItem | null, graph: KnowledgeGraph, filePath: string): void {
+    if (!item) {
+      return;
+    }
+
+    if (this.isValidEntity(item)) {
+      graph.entities.push(this.toEntity(item));
+    } else if (this.isValidRelation(item)) {
+      graph.relations.push(this.toRelation(item));
+    } else if (item.type === ENTITY_TYPE || item.type === RELATION_TYPE) {
+      console.warn(`Skipping ${item.type} with missing required fields in ${filePath}`);
+    }
+  }
+
+  /**
+   * Serialize an entity to JSONL format
+   */
+  private serializeEntity(entity: Entity): string {
+    return JSON.stringify({
+      type: ENTITY_TYPE,
+      name: entity.name,
+      entityType: entity.entityType,
+      observations: entity.observations,
+      agentThreadId: entity.agentThreadId,
+      timestamp: entity.timestamp,
+      confidence: entity.confidence,
+      importance: entity.importance
+    });
+  }
+
+  /**
+   * Serialize a relation to JSONL format
+   */
+  private serializeRelation(relation: Relation): string {
+    return JSON.stringify({
+      type: RELATION_TYPE,
+      from: relation.from,
+      to: relation.to,
+      relationType: relation.relationType,
+      agentThreadId: relation.agentThreadId,
+      timestamp: relation.timestamp,
+      confidence: relation.confidence,
+      importance: relation.importance
+    });
+  }
+
+  /**
+   * Get or create thread data in the map
+   */
+  private getOrCreateThreadData(threadMap: Map<string, ThreadData>, threadId: string): ThreadData {
+    let threadData = threadMap.get(threadId);
+    if (!threadData) {
+      threadData = { entities: [], relations: [] };
+      threadMap.set(threadId, threadData);
+    }
+    return threadData;
+  }
+
+  /**
+   * Check if error is a file not found error
+   */
+  private isFileNotFoundError(error: unknown): boolean {
+    return error instanceof Error && 'code' in error && (error as any).code === FILE_NOT_FOUND_ERROR;
+  }
+
+  /**
+   * Extract thread ID from filename
+   */
+  private extractThreadId(fileName: string): string | null {
+    const match = fileName.match(new RegExp(`^${THREAD_FILE_PREFIX}(.+)${THREAD_FILE_EXTENSION}$`));
+    return match ? match[1] : null;
   }
 
   /**
@@ -28,55 +202,16 @@ export class JsonlStorageAdapter implements IStorageAdapter {
     try {
       const data = await fs.readFile(filePath, "utf-8");
       const lines = data.split("\n").filter(line => line.trim() !== "");
-      return lines.reduce((graph: KnowledgeGraph, line) => {
-        let item: any;
-        try {
-          item = JSON.parse(line);
-        } catch (parseError) {
-          console.warn(`Skipping malformed JSON line in ${filePath} (line length: ${line.length} chars)`);
-          return graph;
-        }
-        
-        if (item.type === "entity") {
-          // Validate required fields
-          if (!item.name || !item.entityType || !Array.isArray(item.observations) || 
-              !item.agentThreadId || !item.timestamp || 
-              typeof item.confidence !== 'number' || typeof item.importance !== 'number') {
-            console.warn(`Skipping entity with missing required fields in ${filePath}`);
-            return graph;
-          }
-          graph.entities.push({
-            name: item.name,
-            entityType: item.entityType,
-            observations: item.observations,
-            agentThreadId: item.agentThreadId,
-            timestamp: item.timestamp,
-            confidence: item.confidence,
-            importance: item.importance
-          });
-        }
-        if (item.type === "relation") {
-          // Validate required fields
-          if (!item.from || !item.to || !item.relationType || 
-              !item.agentThreadId || !item.timestamp || 
-              typeof item.confidence !== 'number' || typeof item.importance !== 'number') {
-            console.warn(`Skipping relation with missing required fields in ${filePath}`);
-            return graph;
-          }
-          graph.relations.push({
-            from: item.from,
-            to: item.to,
-            relationType: item.relationType,
-            agentThreadId: item.agentThreadId,
-            timestamp: item.timestamp,
-            confidence: item.confidence,
-            importance: item.importance
-          });
-        }
-        return graph;
-      }, { entities: [], relations: [] });
+      const graph: KnowledgeGraph = { entities: [], relations: [] };
+
+      for (const line of lines) {
+        const item = this.parseLine(line, filePath);
+        this.processItem(item, graph, filePath);
+      }
+
+      return graph;
     } catch (error) {
-      if (error instanceof Error && 'code' in error && (error as any).code === "ENOENT") {
+      if (this.isFileNotFoundError(error)) {
         return { entities: [], relations: [] };
       }
       throw error;
@@ -84,16 +219,17 @@ export class JsonlStorageAdapter implements IStorageAdapter {
   }
 
   /**
-   * Load the complete knowledge graph from all thread files
+   * Get all thread file names in the memory directory
    */
-  async loadGraph(): Promise<KnowledgeGraph> {
+  private async getThreadFileNames(): Promise<string[]> {
     const files = await fs.readdir(this.memoryDirPath).catch(() => []);
-    const threadFiles = files.filter(f => f.startsWith('thread-') && f.endsWith('.jsonl'));
-    
-    const graphs = await Promise.all(
-      threadFiles.map(f => this.loadGraphFromFile(path.join(this.memoryDirPath, f)))
-    );
-    
+    return files.filter(f => f.startsWith(THREAD_FILE_PREFIX) && f.endsWith(THREAD_FILE_EXTENSION));
+  }
+
+  /**
+   * Merge multiple graphs into one
+   */
+  private mergeGraphs(graphs: KnowledgeGraph[]): KnowledgeGraph {
     return graphs.reduce((acc: KnowledgeGraph, graph: KnowledgeGraph) => ({
       entities: [...acc.entities, ...graph.entities],
       relations: [...acc.relations, ...graph.relations]
@@ -101,43 +237,48 @@ export class JsonlStorageAdapter implements IStorageAdapter {
   }
 
   /**
+   * Load the complete knowledge graph from all thread files
+   */
+  async loadGraph(): Promise<KnowledgeGraph> {
+    const threadFiles = await this.getThreadFileNames();
+    const graphs = await Promise.all(
+      threadFiles.map(f => this.loadGraphFromFile(path.join(this.memoryDirPath, f)))
+    );
+    return this.mergeGraphs(graphs);
+  }
+
+  /**
+   * Delete empty thread file if it exists
+   */
+  private async deleteThreadFileIfExists(threadFilePath: string): Promise<void> {
+    try {
+      await fs.unlink(threadFilePath);
+    } catch (error) {
+      if (!this.isFileNotFoundError(error)) {
+        console.warn(`Failed to delete empty thread file ${threadFilePath}:`, error);
+      }
+    }
+  }
+
+  /**
+   * Serialize thread data to JSONL lines
+   */
+  private serializeThreadData(threadData: ThreadData): string[] {
+    return [
+      ...threadData.entities.map(e => this.serializeEntity(e)),
+      ...threadData.relations.map(r => this.serializeRelation(r))
+    ];
+  }
+
+  /**
    * Save data for a specific thread
    */
-  private async saveGraphForThread(agentThreadId: string, entities: Entity[], relations: Relation[]): Promise<void> {
+  private async saveGraphForThread(agentThreadId: string, threadData: ThreadData): Promise<void> {
     const threadFilePath = this.getThreadFilePath(agentThreadId);
-    const lines = [
-      ...entities.map(e => JSON.stringify({
-        type: "entity",
-        name: e.name,
-        entityType: e.entityType,
-        observations: e.observations,
-        agentThreadId: e.agentThreadId,
-        timestamp: e.timestamp,
-        confidence: e.confidence,
-        importance: e.importance
-      })),
-      ...relations.map(r => JSON.stringify({
-        type: "relation",
-        from: r.from,
-        to: r.to,
-        relationType: r.relationType,
-        agentThreadId: r.agentThreadId,
-        timestamp: r.timestamp,
-        confidence: r.confidence,
-        importance: r.importance
-      })),
-    ];
+    const lines = this.serializeThreadData(threadData);
     
-    // Avoid creating or keeping empty files when there is no data for this thread
     if (lines.length === 0) {
-      try {
-        await fs.unlink(threadFilePath);
-      } catch (error) {
-        // Only ignore ENOENT errors (file doesn't exist)
-        if (error instanceof Error && 'code' in error && (error as any).code !== 'ENOENT') {
-          console.warn(`Failed to delete empty thread file ${threadFilePath}:`, error);
-        }
-      }
+      await this.deleteThreadFileIfExists(threadFilePath);
       return;
     }
     
@@ -145,68 +286,62 @@ export class JsonlStorageAdapter implements IStorageAdapter {
   }
 
   /**
-   * Save the complete knowledge graph to thread-specific files
+   * Group graph data by thread ID
    */
-  async saveGraph(graph: KnowledgeGraph): Promise<void> {
-    // Group entities and relations by agentThreadId
-    const threadMap = new Map<string, { entities: Entity[], relations: Relation[] }>();
+  private groupByThread(graph: KnowledgeGraph): Map<string, ThreadData> {
+    const threadMap = new Map<string, ThreadData>();
     
     for (const entity of graph.entities) {
-      if (!threadMap.has(entity.agentThreadId)) {
-        threadMap.set(entity.agentThreadId, { entities: [], relations: [] });
-      }
-      const threadData = threadMap.get(entity.agentThreadId);
-      if (threadData) {
-        threadData.entities.push(entity);
-      }
+      const threadData = this.getOrCreateThreadData(threadMap, entity.agentThreadId);
+      threadData.entities.push(entity);
     }
     
     for (const relation of graph.relations) {
-      if (!threadMap.has(relation.agentThreadId)) {
-        threadMap.set(relation.agentThreadId, { entities: [], relations: [] });
-      }
-      const threadData = threadMap.get(relation.agentThreadId);
-      if (threadData) {
-        threadData.relations.push(relation);
-      }
+      const threadData = this.getOrCreateThreadData(threadMap, relation.agentThreadId);
+      threadData.relations.push(relation);
     }
     
-    // Save each thread's data to its own file
-    await Promise.all(
-      Array.from(threadMap.entries()).map(([threadId, data]) => 
-        this.saveGraphForThread(threadId, data.entities, data.relations)
-      )
+    return threadMap;
+  }
+
+  /**
+   * Save all thread data to their respective files
+   */
+  private async saveAllThreads(threadMap: Map<string, ThreadData>): Promise<void> {
+    const savePromises = Array.from(threadMap.entries()).map(([threadId, data]) => 
+      this.saveGraphForThread(threadId, data)
     );
-    
-    // Clean up stale thread files that no longer have data
+    await Promise.all(savePromises);
+  }
+
+  /**
+   * Clean up stale thread files that are no longer in the graph
+   */
+  private async cleanupStaleThreadFiles(activeThreadIds: Set<string>): Promise<void> {
     try {
-      const files = await fs.readdir(this.memoryDirPath).catch(() => []);
-      const threadFiles = files.filter(f => f.startsWith('thread-') && f.endsWith('.jsonl'));
+      const threadFiles = await this.getThreadFileNames();
       
-      await Promise.all(
-        threadFiles.map(async (fileName) => {
-          // Extract threadId from filename: thread-{agentThreadId}.jsonl
-          const match = fileName.match(/^thread-(.+)\.jsonl$/);
-          if (match) {
-            const threadId = match[1];
-            if (!threadMap.has(threadId)) {
-              const filePath = path.join(this.memoryDirPath, fileName);
-              try {
-                await fs.unlink(filePath);
-              } catch (error) {
-                // Only log non-ENOENT errors
-                if (error instanceof Error && 'code' in error && (error as any).code !== 'ENOENT') {
-                  console.warn(`Failed to delete stale thread file ${filePath}:`, error);
-                }
-              }
-            }
-          }
-        })
-      );
+      const deletePromises = threadFiles.map(async (fileName) => {
+        const threadId = this.extractThreadId(fileName);
+        if (threadId && !activeThreadIds.has(threadId)) {
+          const filePath = path.join(this.memoryDirPath, fileName);
+          await this.deleteThreadFileIfExists(filePath);
+        }
+      });
+      
+      await Promise.all(deletePromises);
     } catch (error) {
-      // Best-effort cleanup: log but don't fail the save operation
       console.warn('Failed to clean up stale thread files:', error);
     }
+  }
+
+  /**
+   * Save the complete knowledge graph to thread-specific files
+   */
+  async saveGraph(graph: KnowledgeGraph): Promise<void> {
+    const threadMap = this.groupByThread(graph);
+    await this.saveAllThreads(threadMap);
+    await this.cleanupStaleThreadFiles(new Set(threadMap.keys()));
   }
 
   /**
