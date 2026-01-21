@@ -442,8 +442,8 @@ interface Observation {
 {
   "error": "Validation failed",
   "entity": "Portfolio Document",
-  "observation": "Contains 2 main tables: planning (Section I) and activities (Section II) with 21 records and appendices with certificates",
-  "problem": "Too long (115 chars, 4 sentences). Max 150 chars, 3 sentences.",
+  "observation": "Contains 2 main tables. Planning is in Section I. Activities are in Section II with 21 records. Appendices contain certificates.",
+  "problem": "Too many sentences (4). Max 3.",
   "suggestion": "Split into 3 observations: 1) 'Contains planning table (Section I)', 2) 'Contains activities table (Section II) with 21 records', 3) 'Appendices contain certificates'"
 }
 ```

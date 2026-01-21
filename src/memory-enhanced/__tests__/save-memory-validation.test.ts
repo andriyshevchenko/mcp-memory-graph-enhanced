@@ -68,6 +68,17 @@ describe('Observation Validation', () => {
     expect(result2.valid).toBe(true);
   });
 
+  it('should accept observations with decimal numbers', () => {
+    const result1 = validateObservation('Accuracy improved to 3.14 percent');
+    expect(result1.valid).toBe(true);
+    
+    const result2 = validateObservation('Temperature is 98.6 degrees');
+    expect(result2.valid).toBe(true);
+    
+    const result3 = validateObservation('PI is approximately 3.14159');
+    expect(result3.valid).toBe(true);
+  });
+
   it('should still correctly count actual sentences with version numbers', () => {
     const result = validateObservation('Version 1.0 released. Bug fixes applied. Documentation updated.');
     expect(result.valid).toBe(true); // 3 sentences, at the limit
