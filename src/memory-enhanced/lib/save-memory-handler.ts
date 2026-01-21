@@ -120,8 +120,7 @@ function getInverseRelationType(relationType: string): string {
     'modifies': 'modified by',
     'modified by': 'modifies',
     'updates': 'updated by',
-    'updated by': 'updates',
-    'updates for': 'updated by'
+    'updated by': 'updates'
   };
   
   // Return known inverse or construct a passive form

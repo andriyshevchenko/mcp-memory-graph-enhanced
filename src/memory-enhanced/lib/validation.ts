@@ -83,9 +83,11 @@ export function normalizeEntityType(entityType: string): { normalized: string; w
   
   // Warn about spaces in type
   if (entityType.includes(' ')) {
-    const suggested = entityType.split(' ').map(word => 
-      word[0].toUpperCase() + word.slice(1)
-    ).join('');
+    const suggested = entityType.split(' ')
+      .filter(word => word.length > 0) // Filter empty strings
+      .map(word => 
+        word.length > 0 ? word[0].toUpperCase() + word.slice(1) : ''
+      ).join('');
     warnings.push(`EntityType '${entityType}' contains spaces. Consider using '${suggested}' instead.`);
   }
   
@@ -133,7 +135,7 @@ export function validateSaveMemoryRequest(
     if (!relResult.valid) {
       errors.push({
         entity: entity.name,
-        error: relResult.error!,
+        error: relResult.error || 'Invalid relations',
         suggestion: relResult.suggestion
       });
     }
@@ -143,7 +145,7 @@ export function validateSaveMemoryRequest(
     if (!targetResult.valid) {
       errors.push({
         entity: entity.name,
-        error: targetResult.error!,
+        error: targetResult.error || 'Invalid relation target',
         suggestion: targetResult.suggestion
       });
     }
