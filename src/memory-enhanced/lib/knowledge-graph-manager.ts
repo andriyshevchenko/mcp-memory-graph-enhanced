@@ -259,9 +259,13 @@ export class KnowledgeGraphManager {
   }
 
   /**
-   * Get names of all entities in a specific thread (for cross-thread reference validation)
-   * @param threadId The thread ID to query
-   * @returns Set of entity names that exist in the thread
+   * Get names of all entities that can be referenced in relations
+   * @param threadId The thread ID (currently unused as entities are globally unique)
+   * @returns Set of entity names that exist in the graph
+   * 
+   * Note: Entity names are globally unique across all threads in the collaborative
+   * knowledge graph (see createEntities comment). This allows any thread to reference
+   * any existing entity, enabling incremental building and cross-thread collaboration.
    */
   async getEntityNamesInThread(threadId: string): Promise<Set<string>> {
     const graph = await this.storage.loadGraph();
