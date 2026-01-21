@@ -40,9 +40,14 @@ function countSentences(text: string): number {
 }
 
 /**
+ * Maximum length for observation preview in error messages
+ */
+const OBSERVATION_PREVIEW_LENGTH = 50;
+
+/**
  * Validates a single observation according to spec requirements:
  * - Min 5 characters
- * - Max 150 characters
+ * - Max 300 characters (increased to accommodate technical content)
  * - Max 3 sentences (ignoring periods in version numbers and decimals)
  */
 export function validateObservation(obs: string): ValidationResult {
@@ -58,7 +63,7 @@ export function validateObservation(obs: string): ValidationResult {
     return {
       valid: false,
       error: `Observation too long (${obs.length} chars). Max ${MAX_OBSERVATION_LENGTH}.`,
-      suggestion: `Split into multiple observations.`
+      suggestion: `Split into atomic facts.`
     };
   }
   
@@ -199,7 +204,8 @@ export function validateSaveMemoryRequest(
           entityType: entity.entityType,
           error: `Observation ${i + 1}: ${obsResult.error}`,
           suggestion: obsResult.suggestion,
-          observationPreview: entity.observations[i].substring(0, 50) + (entity.observations[i].length > 50 ? '...' : '')
+          observationPreview: entity.observations[i].substring(0, OBSERVATION_PREVIEW_LENGTH) + 
+                             (entity.observations[i].length > OBSERVATION_PREVIEW_LENGTH ? '...' : '')
         });
       }
     }
