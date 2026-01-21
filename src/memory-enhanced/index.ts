@@ -48,6 +48,8 @@ let MEMORY_DIR_PATH: string;
 // Re-export types for backward compatibility
 export type { Entity, Relation, KnowledgeGraph } from './lib/types.js';
 export { KnowledgeGraphManager } from './lib/knowledge-graph-manager.js';
+export type { IStorageAdapter } from './lib/storage-interface.js';
+export { JsonlStorageAdapter } from './lib/jsonl-storage-adapter.js';
 
 let knowledgeGraphManager: KnowledgeGraphManager;
 
