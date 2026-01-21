@@ -19,11 +19,11 @@ import {
  * @returns Number of actual sentences
  */
 function countSentences(text: string): number {
-  // Remove version numbers (e.g., 1.2.0, v5.4.3) and decimal numbers before counting
+  // Remove version numbers (e.g., 1.2.0, v5.4.3, V2.1.0) and decimal numbers before counting
   // This prevents false positives where technical data is incorrectly counted as sentences
+  // Using explicit case handling [vV] for version prefix
   const cleaned = text
-    .replace(/\bv?\d+\.\d+(\.\d+)*\b/gi, 'VERSION') // version numbers like 1.2.0 or v5.4.3
-    .replace(/\b\d+\.\d+\b/g, 'NUMBER'); // decimal numbers like 3.14
+    .replace(/\b[vV]?\d+\.\d+(\.\d+)*\b/g, 'VERSION'); // handles version numbers and decimals
   
   // Split on actual sentence terminators
   const sentences = cleaned.split(SENTENCE_TERMINATORS).filter(s => s.trim().length > 0);

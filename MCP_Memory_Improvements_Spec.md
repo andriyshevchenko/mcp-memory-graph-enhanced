@@ -85,10 +85,10 @@ interface SaveMemoryOutput {
 #### Rules:
 ```typescript
 function countSentences(text: string): number {
-  // Remove version numbers (e.g., 1.2.0, v5.4.3) and decimal numbers before counting
+  // Remove version numbers (e.g., 1.2.0, v5.4.3, V2.1.0) and decimal numbers before counting
+  // Using explicit case handling [vV] for version prefix
   const cleaned = text
-    .replace(/\bv?\d+\.\d+(\.\d+)*\b/gi, 'VERSION') // version numbers
-    .replace(/\b\d+\.\d+\b/g, 'NUMBER'); // decimal numbers
+    .replace(/\b[vV]?\d+\.\d+(\.\d+)*\b/g, 'VERSION'); // handles version numbers and decimals
   
   const sentences = cleaned.split(/[.!?]/).filter(s => s.trim().length > 0);
   return sentences.length;
