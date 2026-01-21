@@ -3,9 +3,14 @@
  */
 
 import { ValidationResult, SaveMemoryEntity } from './types.js';
-
-const MAX_OBSERVATION_LENGTH = 150;
-const MAX_SENTENCES = 2;
+import { 
+  MAX_OBSERVATION_LENGTH, 
+  MAX_SENTENCES, 
+  SENTENCE_TERMINATORS,
+  TARGET_AVG_RELATIONS,
+  RELATION_SCORE_WEIGHT,
+  OBSERVATION_SCORE_WEIGHT
+} from './constants.js';
 
 /**
  * Validates a single observation according to spec requirements:
@@ -21,7 +26,7 @@ export function validateObservation(obs: string): ValidationResult {
     };
   }
   
-  const sentences = obs.split(/[.!?]/).filter(s => s.trim().length > 0);
+  const sentences = obs.split(SENTENCE_TERMINATORS).filter(s => s.trim().length > 0);
   if (sentences.length > MAX_SENTENCES) {
     return {
       valid: false,
@@ -166,9 +171,9 @@ export function validateSaveMemoryRequest(
 export function calculateQualityScore(entities: SaveMemoryEntity[]): number {
   if (entities.length === 0) return 0;
   
-  // Average relations per entity (target: 2+)
+  // Average relations per entity
   const avgRelations = entities.reduce((sum, e) => sum + e.relations.length, 0) / entities.length;
-  const relationScore = Math.min(avgRelations / 2, 1.0); // Normalize to 0-1
+  const relationScore = Math.min(avgRelations / TARGET_AVG_RELATIONS, 1.0); // Normalize to 0-1
   
   // Average observation length (shorter is better for atomicity)
   const totalObs = entities.reduce((sum, e) => sum + e.observations.length, 0);
@@ -178,5 +183,5 @@ export function calculateQualityScore(entities: SaveMemoryEntity[]): number {
   const obsScore = 1 - (avgObsLength / MAX_OBSERVATION_LENGTH); // Shorter = higher score
   
   // Weighted average: relations matter more than observation length
-  return relationScore * 0.7 + obsScore * 0.3;
+  return relationScore * RELATION_SCORE_WEIGHT + obsScore * OBSERVATION_SCORE_WEIGHT;
 }

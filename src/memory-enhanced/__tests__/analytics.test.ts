@@ -1,33 +1,24 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { promises as fs } from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { KnowledgeGraphManager } from '../lib/knowledge-graph-manager.js';
-import { Entity, Relation } from '../lib/types.js';
+import { 
+  TestDirectoryManager, 
+  EntityBuilder, 
+  RelationBuilder, 
+  ObservationBuilder 
+} from './test-helpers.js';
 
 describe('Analytics - getAnalytics', () => {
   let manager: KnowledgeGraphManager;
-  let testDirPath: string;
+  let dirManager: TestDirectoryManager;
 
   beforeEach(async () => {
-    // Create a temporary test directory
-    testDirPath = path.join(
-      path.dirname(fileURLToPath(import.meta.url)),
-      `test-analytics-${Date.now()}`
-    );
-    await fs.mkdir(testDirPath, { recursive: true });
+    dirManager = new TestDirectoryManager('test-analytics');
+    const testDirPath = await dirManager.setup();
     manager = new KnowledgeGraphManager(testDirPath);
   });
 
   afterEach(async () => {
-    // Clean up test directory
-    try {
-      const files = await fs.readdir(testDirPath);
-      await Promise.all(files.map(f => fs.unlink(path.join(testDirPath, f))));
-      await fs.rmdir(testDirPath);
-    } catch (error) {
-      // Ignore errors if directory doesn't exist
-    }
+    await dirManager.cleanup();
   });
 
   it('should return empty arrays for non-existent thread', async () => {
@@ -40,53 +31,20 @@ describe('Analytics - getAnalytics', () => {
   });
 
   it('should return recent changes sorted chronologically', async () => {
-    const entities: Entity[] = [
-      {
-        name: 'Entity1',
-        entityType: 'Type1',
-        observations: [{
-          id: 'obs1',
-          content: 'First',
-          timestamp: '2026-01-01T10:00:00Z',
-          version: 1,
-          agentThreadId: 'test-thread'
-        }],
-        agentThreadId: 'test-thread',
-        timestamp: '2026-01-01T10:00:00Z',
-        confidence: 1.0,
-        importance: 1.0
-      },
-      {
-        name: 'Entity2',
-        entityType: 'Type2',
-        observations: [{
-          id: 'obs2',
-          content: 'Second',
-          timestamp: '2026-01-01T11:00:00Z',
-          version: 1,
-          agentThreadId: 'test-thread'
-        }],
-        agentThreadId: 'test-thread',
-        timestamp: '2026-01-01T11:00:00Z',
-        confidence: 1.0,
-        importance: 1.0
-      }
-    ];
+    const entity1 = new EntityBuilder('Entity1', 'Type1')
+      .withObservation(new ObservationBuilder('obs1', 'First').build())
+      .withTimestamp('2026-01-01T10:00:00Z')
+      .build();
 
-    const relations: Relation[] = [
-      {
-        from: 'Entity1',
-        to: 'Entity2',
-        relationType: 'relates to',
-        agentThreadId: 'test-thread',
-        timestamp: '2026-01-01T10:00:00Z',
-        confidence: 1.0,
-        importance: 1.0
-      }
-    ];
+    const entity2 = new EntityBuilder('Entity2', 'Type2')
+      .withObservation(new ObservationBuilder('obs2', 'Second').withTimestamp('2026-01-01T11:00:00Z').build())
+      .withTimestamp('2026-01-01T11:00:00Z')
+      .build();
 
-    await manager.createEntities(entities);
-    await manager.createRelations(relations);
+    const relation = new RelationBuilder('Entity1', 'Entity2', 'relates to').build();
+
+    await manager.createEntities([entity1, entity2]);
+    await manager.createRelations([relation]);
 
     const analytics = await manager.getAnalytics('test-thread');
 

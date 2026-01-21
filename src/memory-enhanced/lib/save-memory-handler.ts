@@ -5,6 +5,7 @@
 
 import { Entity, Relation, SaveMemoryInput, SaveMemoryOutput, Observation } from './types.js';
 import { validateSaveMemoryRequest, calculateQualityScore } from './validation.js';
+import { getInverseRelationType } from './relation-inverter.js';
 import { randomUUID } from 'crypto';
 
 /**
@@ -114,38 +115,4 @@ export async function handleSaveMemory(
       validation_errors: [`Transaction failed: ${error instanceof Error ? error.message : String(error)}`]
     };
   }
-}
-
-/**
- * Converts a relation type to its inverse for bidirectional relations
- */
-function getInverseRelationType(relationType: string): string {
-  const inverseMap: Record<string, string> = {
-    'created': 'created by',
-    'created by': 'created',
-    'contains': 'contained in',
-    'contained in': 'contains',
-    'uses': 'used by',
-    'used by': 'uses',
-    'manages': 'managed by',
-    'managed by': 'manages',
-    'owns': 'owned by',
-    'owned by': 'owns',
-    'modifies': 'modified by',
-    'modified by': 'modifies',
-    'updates': 'updated by',
-    'updated by': 'updates'
-  };
-  
-  // Return known inverse or construct a passive form
-  if (inverseMap[relationType.toLowerCase()]) {
-    return inverseMap[relationType.toLowerCase()];
-  }
-  
-  // Simple heuristic: if it ends with "by", remove it; otherwise add "by"
-  if (relationType.toLowerCase().endsWith(' by')) {
-    return relationType.slice(0, -3).trim();
-  }
-  
-  return `${relationType} (inverse)`;
 }
