@@ -101,6 +101,11 @@ describe('Observation Validation', () => {
     expect(result.valid).toBe(true);
   });
 
+  it('should handle URLs with trailing punctuation correctly', () => {
+    const result = validateObservation('Visit https://example.com. Documentation available. Support provided.');
+    expect(result.valid).toBe(true); // 3 sentences
+  });
+
   it('should accept observations with hostnames', () => {
     const result = validateObservation('Connected to ni-internal-dev.servicebus.windows.net successfully');
     expect(result.valid).toBe(true);

@@ -21,11 +21,11 @@ import {
 function countSentences(text: string): number {
   // Patterns to ignore - technical content that contains periods but aren't sentence boundaries
   const patternsToIgnore = [
-    /https?:\/\/[^\s]+/g,                                                       // URLs (http:// or https://)
+    /https?:\/\/[^\s.,!?]+/g,                                                   // URLs (http:// or https://)
     /\b\d+\.\d+\.\d+\.\d+\b/g,                                                 // IP addresses (e.g., 192.168.1.1)
     /\b[A-Za-z]:\\[^\s<>:"|?*]+/g,                                             // Windows paths (e.g., C:\path\to\file)
     /\b[vV]?\d+\.\d+(\.\d+)*\b/g,                                              // Version numbers (e.g., v1.2.0, 5.4.3)
-    /\b[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)+\b/g,  // Hostnames/domains (e.g., subdomain.domain.com)
+    /\b[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)+\b/g,  // Hostnames/domains (e.g., subdomain.domain.com)
   ];
   
   // Replace technical patterns with placeholders to prevent false sentence detection
