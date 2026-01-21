@@ -8,7 +8,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 // Import modular components
-import { Entity, Relation, KnowledgeGraph, SaveMemoryInput, GetAnalyticsInput, GetObservationHistoryInput } from './lib/types.js';
+import { SaveMemoryInput, GetAnalyticsInput, GetObservationHistoryInput } from './lib/types.js';
 import { KnowledgeGraphManager } from './lib/knowledge-graph-manager.js';
 import { 
   EntitySchema, 

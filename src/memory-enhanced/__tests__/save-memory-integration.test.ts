@@ -3,7 +3,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { handleSaveMemory } from '../lib/save-memory-handler.js';
-import { SaveMemoryInput, Entity, Relation } from '../lib/types.js';
+import { SaveMemoryInput } from '../lib/types.js';
 import { KnowledgeGraphManager } from '../lib/knowledge-graph-manager.js';
 
 describe('Save Memory Handler - Integration Tests', () => {

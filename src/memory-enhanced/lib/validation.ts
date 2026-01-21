@@ -85,9 +85,8 @@ export function normalizeEntityType(entityType: string): { normalized: string; w
   if (entityType.includes(' ')) {
     const suggested = entityType.split(' ')
       .filter(word => word.length > 0) // Filter empty strings
-      .map(word => 
-        word.length > 0 ? word[0].toUpperCase() + word.slice(1) : ''
-      ).join('');
+      .map(word => word[0].toUpperCase() + word.slice(1))
+      .join('');
     warnings.push(`EntityType '${entityType}' contains spaces. Consider using '${suggested}' instead.`);
   }
   

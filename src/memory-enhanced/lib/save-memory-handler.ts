@@ -3,7 +3,7 @@
  * Provides atomic creation of entities and relations with validation
  */
 
-import { Entity, Relation, SaveMemoryInput, SaveMemoryOutput, SaveMemoryEntity, Observation } from './types.js';
+import { Entity, Relation, SaveMemoryInput, SaveMemoryOutput, Observation } from './types.js';
 import { validateSaveMemoryRequest, calculateQualityScore } from './validation.js';
 import { randomUUID } from 'crypto';
 

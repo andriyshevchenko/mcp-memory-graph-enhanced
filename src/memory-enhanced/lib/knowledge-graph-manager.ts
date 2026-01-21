@@ -481,7 +481,6 @@ export class KnowledgeGraphManager {
     
     // Only return entities and relations that were actually modified since the specified time
     const recentEntities = graph.entities.filter(e => new Date(e.timestamp) >= sinceDate);
-    const recentEntityNames = new Set(recentEntities.map(e => e.name));
     
     // Only include relations that are recent themselves
     const recentRelations = graph.relations.filter(r => new Date(r.timestamp) >= sinceDate);
@@ -1017,19 +1016,19 @@ export class KnowledgeGraphManager {
     }
     
     // Trace forwards to find all successors
-    currentObs = startObs;
+    let forwardObs: Observation = startObs;
     visited.clear();
     
-    while (currentObs && currentObs.superseded_by) {
-      if (visited.has(currentObs.superseded_by)) {
+    while (forwardObs.superseded_by) {
+      if (visited.has(forwardObs.superseded_by)) {
         // Circular reference protection
         break;
       }
-      const successor = entity.observations.find(o => o.id === currentObs!.superseded_by);
+      const successor = entity.observations.find(o => o.id === forwardObs.superseded_by);
       if (successor) {
         visited.add(successor.id);
         history.push(successor);
-        currentObs = successor;
+        forwardObs = successor;
       } else {
         break;
       }
