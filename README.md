@@ -119,11 +119,70 @@ npx mcp-server-memory-enhanced
 
 ### Configuration
 
+#### File Storage (Default)
+
 Set the `MEMORY_DIR_PATH` environment variable to customize the storage location:
 
 ```bash
 MEMORY_DIR_PATH=/path/to/memory/directory npx mcp-server-memory-enhanced
 ```
+
+#### Neo4j Storage (Optional)
+
+The server supports Neo4j as an alternative storage backend. If Neo4j environment variables are set, the server will attempt to connect to Neo4j. If the connection fails or variables are not set, it will automatically fall back to file-based JSONL storage.
+
+**Environment Variables:**
+
+```bash
+# Neo4j connection settings
+export NEO4J_URI=neo4j://localhost:7687
+export NEO4J_USERNAME=neo4j
+export NEO4J_PASSWORD=your_password
+export NEO4J_DATABASE=neo4j  # Optional, defaults to 'neo4j'
+
+# Run the server
+npx mcp-server-memory-enhanced
+```
+
+**Using Docker Compose:**
+
+A `docker-compose.yml` file is provided for local development with Neo4j:
+
+```bash
+# Start Neo4j and the MCP server
+docker-compose up
+
+# The Neo4j browser will be available at http://localhost:7474
+# Username: neo4j, Password: testpassword
+```
+
+**Using with Claude Desktop:**
+
+Configure the server in your Claude Desktop configuration with Neo4j:
+
+```json
+{
+  "mcpServers": {
+    "memory-enhanced": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory-enhanced"],
+      "env": {
+        "NEO4J_URI": "neo4j://localhost:7687",
+        "NEO4J_USERNAME": "neo4j",
+        "NEO4J_PASSWORD": "your_password"
+      }
+    }
+  }
+}
+```
+
+**Benefits of Neo4j Storage:**
+
+- **Graph-native queries**: Faster relationship traversals and path finding
+- **Scalability**: Better performance with large knowledge graphs
+- **Advanced queries**: Native support for graph algorithms
+- **Visualization**: Use Neo4j Browser to visualize your knowledge graph
+- **Automatic fallback**: If Neo4j is not available, automatically uses file storage
 
 ## User Guide
 

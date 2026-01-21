@@ -1,12 +1,8 @@
 /**
- * Neo4j Storage Adapter (Skeleton Implementation)
+ * Neo4j Storage Adapter
  * 
- * This is a skeleton implementation showing how a Neo4j storage adapter could be built.
- * To use this in production, you would need to:
- * 1. Install neo4j-driver: npm install neo4j-driver
- * 2. Implement the actual Cypher queries
- * 3. Add error handling and connection management
- * 4. Add transaction support for atomic operations
+ * Production-ready implementation of the Neo4j storage adapter.
+ * Provides full CRUD operations for the knowledge graph using Neo4j.
  * 
  * Example usage:
  * ```typescript
@@ -24,7 +20,8 @@
  * ```
  */
 
-import { KnowledgeGraph } from './types.js';
+import neo4j, { Driver, Session } from 'neo4j-driver';
+import { Entity, Relation, KnowledgeGraph, Observation } from './types.js';
 import { IStorageAdapter } from './storage-interface.js';
 
 export interface Neo4jConfig {
@@ -36,11 +33,10 @@ export interface Neo4jConfig {
 
 /**
  * Neo4j-based storage adapter for the knowledge graph
- * This is a skeleton implementation - requires neo4j-driver package
  */
 export class Neo4jStorageAdapter implements IStorageAdapter {
   private config: Neo4jConfig;
-  // private driver: any; // Would be neo4j.Driver from neo4j-driver package
+  private driver: Driver | null = null;
 
   constructor(config: Neo4jConfig) {
     this.config = config;
@@ -50,97 +46,194 @@ export class Neo4jStorageAdapter implements IStorageAdapter {
    * Initialize Neo4j connection
    */
   async initialize(): Promise<void> {
-    // TODO: Initialize Neo4j driver
-    // this.driver = neo4j.driver(
-    //   this.config.uri,
-    //   neo4j.auth.basic(this.config.username, this.config.password)
-    // );
-    
-    // TODO: Verify connectivity
-    // await this.driver.verifyConnectivity();
-    
-    // TODO: Create constraints and indexes
-    // const session = this.driver.session({ database: this.config.database });
-    // try {
-    //   await session.run('CREATE CONSTRAINT IF NOT EXISTS FOR (e:Entity) REQUIRE e.name IS UNIQUE');
-    //   await session.run('CREATE INDEX IF NOT EXISTS FOR (e:Entity) ON (e.entityType)');
-    //   await session.run('CREATE INDEX IF NOT EXISTS FOR (e:Entity) ON (e.agentThreadId)');
-    // } finally {
-    //   await session.close();
-    // }
-    
-    throw new Error('Neo4jStorageAdapter requires neo4j-driver package to be installed and methods to be implemented. See STORAGE.md documentation for setup instructions.');
+    try {
+      // Initialize Neo4j driver
+      this.driver = neo4j.driver(
+        this.config.uri,
+        neo4j.auth.basic(this.config.username, this.config.password)
+      );
+      
+      // Verify connectivity
+      await this.driver.verifyConnectivity();
+      
+      // Create constraints and indexes
+      const session = this.driver.session({ database: this.config.database });
+      try {
+        // Create unique constraint on entity name
+        await session.run(
+          'CREATE CONSTRAINT entity_name_unique IF NOT EXISTS FOR (e:Entity) REQUIRE e.name IS UNIQUE'
+        );
+        
+        // Create indexes for better query performance
+        await session.run(
+          'CREATE INDEX entity_type_idx IF NOT EXISTS FOR (e:Entity) ON (e.entityType)'
+        );
+        await session.run(
+          'CREATE INDEX entity_thread_idx IF NOT EXISTS FOR (e:Entity) ON (e.agentThreadId)'
+        );
+        await session.run(
+          'CREATE INDEX entity_timestamp_idx IF NOT EXISTS FOR (e:Entity) ON (e.timestamp)'
+        );
+      } finally {
+        await session.close();
+      }
+    } catch (error) {
+      throw new Error(`Failed to initialize Neo4j connection: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Serialize observations for Neo4j storage
+   */
+  private serializeObservations(observations: Observation[]): string {
+    return JSON.stringify(observations);
+  }
+
+  /**
+   * Deserialize observations from Neo4j storage
+   */
+  private deserializeObservations(observationsJson: string): Observation[] {
+    try {
+      return JSON.parse(observationsJson);
+    } catch {
+      return [];
+    }
   }
 
   /**
    * Load the complete knowledge graph from Neo4j
    */
   async loadGraph(): Promise<KnowledgeGraph> {
-    // TODO: Implement Cypher query to load all entities and relations
-    // Example Cypher for entities:
-    // MATCH (e:Entity)
-    // RETURN e.name as name, 
-    //        e.entityType as entityType,
-    //        e.observations as observations,
-    //        e.agentThreadId as agentThreadId,
-    //        e.timestamp as timestamp,
-    //        e.confidence as confidence,
-    //        e.importance as importance
-    
-    // Example Cypher for relations:
-    // MATCH (from:Entity)-[r:RELATES_TO]->(to:Entity)
-    // RETURN from.name as from,
-    //        to.name as to,
-    //        r.relationType as relationType,
-    //        r.agentThreadId as agentThreadId,
-    //        r.timestamp as timestamp,
-    //        r.confidence as confidence,
-    //        r.importance as importance
-    
-    throw new Error('Neo4jStorageAdapter.loadGraph() is not implemented. This is a skeleton - install neo4j-driver and implement the Cypher queries shown in comments above.');
+    if (!this.driver) {
+      throw new Error('Neo4j driver not initialized. Call initialize() first.');
+    }
+
+    const session = this.driver.session({ database: this.config.database });
+    try {
+      // Load all entities
+      const entitiesResult = await session.run(`
+        MATCH (e:Entity)
+        RETURN e.name as name, 
+               e.entityType as entityType,
+               e.observations as observations,
+               e.agentThreadId as agentThreadId,
+               e.timestamp as timestamp,
+               e.confidence as confidence,
+               e.importance as importance
+      `);
+
+      const entities: Entity[] = entitiesResult.records.map(record => ({
+        name: record.get('name'),
+        entityType: record.get('entityType'),
+        observations: this.deserializeObservations(record.get('observations')),
+        agentThreadId: record.get('agentThreadId'),
+        timestamp: record.get('timestamp'),
+        confidence: record.get('confidence'),
+        importance: record.get('importance')
+      }));
+
+      // Load all relations
+      const relationsResult = await session.run(`
+        MATCH (from:Entity)-[r:RELATES_TO]->(to:Entity)
+        RETURN from.name as from,
+               to.name as to,
+               r.relationType as relationType,
+               r.agentThreadId as agentThreadId,
+               r.timestamp as timestamp,
+               r.confidence as confidence,
+               r.importance as importance
+      `);
+
+      const relations: Relation[] = relationsResult.records.map(record => ({
+        from: record.get('from'),
+        to: record.get('to'),
+        relationType: record.get('relationType'),
+        agentThreadId: record.get('agentThreadId'),
+        timestamp: record.get('timestamp'),
+        confidence: record.get('confidence'),
+        importance: record.get('importance')
+      }));
+
+      return { entities, relations };
+    } finally {
+      await session.close();
+    }
   }
 
   /**
    * Save the complete knowledge graph to Neo4j
    */
   async saveGraph(graph: KnowledgeGraph): Promise<void> {
-    // TODO: Implement transactional save
-    // This should:
-    // 1. Start a transaction
-    // 2. Delete all existing nodes and relationships (or use MERGE for upsert)
-    // 3. Create all entities as nodes
-    // 4. Create all relations as relationships
-    // 5. Commit the transaction
-    
-    // Example Cypher for creating entity:
-    // MERGE (e:Entity {name: $name})
-    // SET e.entityType = $entityType,
-    //     e.observations = $observations,
-    //     e.agentThreadId = $agentThreadId,
-    //     e.timestamp = $timestamp,
-    //     e.confidence = $confidence,
-    //     e.importance = $importance
-    
-    // Example Cypher for creating relation:
-    // MATCH (from:Entity {name: $from})
-    // MATCH (to:Entity {name: $to})
-    // MERGE (from)-[r:RELATES_TO {relationType: $relationType}]->(to)
-    // SET r.agentThreadId = $agentThreadId,
-    //     r.timestamp = $timestamp,
-    //     r.confidence = $confidence,
-    //     r.importance = $importance
-    
-    throw new Error('Neo4jStorageAdapter.saveGraph() is not implemented. This is a skeleton - install neo4j-driver and implement the transactional save logic shown in comments above.');
+    if (!this.driver) {
+      throw new Error('Neo4j driver not initialized. Call initialize() first.');
+    }
+
+    const session = this.driver.session({ database: this.config.database });
+    try {
+      // Use a transaction for atomic operations
+      await session.executeWrite(async (tx) => {
+        // Delete all existing data
+        await tx.run('MATCH (n:Entity) DETACH DELETE n');
+
+        // Create all entities
+        for (const entity of graph.entities) {
+          await tx.run(`
+            CREATE (e:Entity {
+              name: $name,
+              entityType: $entityType,
+              observations: $observations,
+              agentThreadId: $agentThreadId,
+              timestamp: $timestamp,
+              confidence: $confidence,
+              importance: $importance
+            })
+          `, {
+            name: entity.name,
+            entityType: entity.entityType,
+            observations: this.serializeObservations(entity.observations),
+            agentThreadId: entity.agentThreadId,
+            timestamp: entity.timestamp,
+            confidence: entity.confidence,
+            importance: entity.importance
+          });
+        }
+
+        // Create all relations
+        for (const relation of graph.relations) {
+          await tx.run(`
+            MATCH (from:Entity {name: $from})
+            MATCH (to:Entity {name: $to})
+            CREATE (from)-[r:RELATES_TO {
+              relationType: $relationType,
+              agentThreadId: $agentThreadId,
+              timestamp: $timestamp,
+              confidence: $confidence,
+              importance: $importance
+            }]->(to)
+          `, {
+            from: relation.from,
+            to: relation.to,
+            relationType: relation.relationType,
+            agentThreadId: relation.agentThreadId,
+            timestamp: relation.timestamp,
+            confidence: relation.confidence,
+            importance: relation.importance
+          });
+        }
+      });
+    } finally {
+      await session.close();
+    }
   }
 
   /**
    * Close Neo4j connection
    */
   async close(): Promise<void> {
-    // TODO: Close the driver
-    // if (this.driver) {
-    //   await this.driver.close();
-    // }
+    if (this.driver) {
+      await this.driver.close();
+      this.driver = null;
+    }
   }
 }
 

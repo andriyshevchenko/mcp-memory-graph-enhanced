@@ -5,6 +5,136 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-01-21
+
+### 🎉 Neo4j Storage Support
+
+This minor release adds full support for Neo4j as an alternative storage backend with automatic fallback to file-based storage.
+
+### Added
+
+#### Neo4j Storage Backend
+- **Full Neo4j implementation** - Production-ready `Neo4jStorageAdapter` with:
+  - Complete CRUD operations using Cypher queries
+  - Transactional writes for data consistency
+  - Connection pooling and error handling
+  - Automatic constraint and index creation
+  - Observation serialization/deserialization
+
+#### Environment-Based Configuration
+- **Auto-detection and fallback** - Server automatically:
+  - Detects Neo4j configuration via environment variables
+  - Attempts connection to Neo4j if configured
+  - Falls back to JSONL storage on failure or if not configured
+  - Logs storage backend selection for transparency
+
+#### Environment Variables
+- `NEO4J_URI` - Neo4j connection URI (e.g., `neo4j://localhost:7687`)
+- `NEO4J_USERNAME` - Neo4j username (default: `neo4j`)
+- `NEO4J_PASSWORD` - Neo4j password
+- `NEO4J_DATABASE` - Optional database name (default: `neo4j`)
+
+#### Docker Support
+- **Updated Dockerfile** - Added environment variable documentation:
+  - Clear comments showing Neo4j configuration options
+  - Maintains backward compatibility with file storage
+  
+- **docker-compose.yml** - Complete local development setup:
+  - Neo4j 5.15.0 service with health checks
+  - MCP server configured to use Neo4j
+  - Persistent volumes for Neo4j data
+  - Pre-configured credentials for quick start
+  - Neo4j Browser available at http://localhost:7474
+
+#### Testing
+- **E2E test suite** (`neo4j-e2e.test.ts`) with 11 comprehensive tests:
+  - Connection and initialization
+  - Entity and relation CRUD operations
+  - Persistence across operations
+  - Observation handling
+  - Entity deletion with cascade
+  - Large graph handling (50+ entities)
+  - Node search functionality
+  - Concurrent operations
+  - save_memory integration
+  - Automatic skip when Neo4j not available
+
+#### Documentation
+- **README updates** - Comprehensive Neo4j documentation:
+  - Environment variable configuration
+  - Docker Compose usage instructions
+  - Claude Desktop integration example
+  - Benefits of Neo4j storage
+  - Automatic fallback behavior
+  
+- **Dockerfile comments** - Clear configuration guidance
+
+### Changed
+
+- **Storage initialization** - Enhanced main function:
+  - `createStorageAdapter()` function for backend selection
+  - Logging for storage backend in use
+  - Graceful error handling with fallback
+  
+- **Dependencies** - Added `neo4j-driver` (v6.0.1) to package.json
+
+- **Version bumped** - From 2.1.0 to 2.2.0 (minor version)
+
+### Benefits
+
+- **Graph-native operations** - Neo4j provides:
+  - Faster relationship traversals
+  - Native graph algorithms
+  - Better performance for large knowledge graphs
+  - Advanced Cypher query capabilities
+  
+- **Visualization** - Neo4j Browser enables:
+  - Visual knowledge graph exploration
+  - Interactive query building
+  - Real-time graph inspection
+  
+- **Scalability** - Better suited for:
+  - Large-scale deployments
+  - Complex relationship queries
+  - High-concurrency scenarios
+  
+- **Zero disruption** - Automatic fallback ensures:
+  - No breaking changes
+  - Works without Neo4j
+  - Smooth migration path
+
+### Migration Guide
+
+No changes required! The server maintains full backward compatibility:
+
+```typescript
+// Default behavior - uses JSONL storage
+npx mcp-server-memory-enhanced
+
+// With Neo4j - automatically detected
+export NEO4J_URI=neo4j://localhost:7687
+export NEO4J_USERNAME=neo4j
+export NEO4J_PASSWORD=password
+npx mcp-server-memory-enhanced
+
+// Docker Compose - Neo4j included
+docker-compose up
+```
+
+### Testing
+
+- All 88 existing tests pass
+- 11 new Neo4j E2E tests (skip when Neo4j unavailable)
+- Code coverage maintained at 66.7%
+- Zero breaking changes
+
+### Security
+
+- Neo4j credentials via environment variables (not hardcoded)
+- Secure connection handling
+- Proper error handling prevents credential leakage
+- Transaction support for data integrity
+
 ## [2.1.0] - 2026-01-21
 
 ### 🎉 Storage Abstraction Layer

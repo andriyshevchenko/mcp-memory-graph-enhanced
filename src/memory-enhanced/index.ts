@@ -21,6 +21,9 @@ import {
   GetObservationHistoryOutputSchema
 } from './lib/schemas.js';
 import { handleSaveMemory } from './lib/save-memory-handler.js';
+import { IStorageAdapter } from './lib/storage-interface.js';
+import { JsonlStorageAdapter } from './lib/jsonl-storage-adapter.js';
+import { Neo4jStorageAdapter } from './lib/neo4j-storage-adapter.js';
 
 // Define memory directory path using environment variable with fallback
 export const defaultMemoryDir = path.join(path.dirname(fileURLToPath(import.meta.url)), 'memory-data');
@@ -40,6 +43,47 @@ export async function ensureMemoryDirectory(): Promise<string> {
   }
   
   return memoryDir;
+}
+
+/**
+ * Create storage adapter based on environment variables
+ * Falls back to JSONL storage if Neo4j is not configured or connection fails
+ */
+async function createStorageAdapter(memoryDirPath: string): Promise<IStorageAdapter> {
+  // Check if Neo4j environment variables are set
+  const neo4jUri = process.env.NEO4J_URI;
+  const neo4jUsername = process.env.NEO4J_USERNAME;
+  const neo4jPassword = process.env.NEO4J_PASSWORD;
+  const neo4jDatabase = process.env.NEO4J_DATABASE;
+
+  // If Neo4j is configured, try to use it
+  if (neo4jUri && neo4jUsername && neo4jPassword) {
+    try {
+      console.error('Attempting to connect to Neo4j at', neo4jUri);
+      const neo4jAdapter = new Neo4jStorageAdapter({
+        uri: neo4jUri,
+        username: neo4jUsername,
+        password: neo4jPassword,
+        database: neo4jDatabase
+      });
+      
+      // Try to initialize the connection
+      await neo4jAdapter.initialize();
+      console.error('Successfully connected to Neo4j storage');
+      return neo4jAdapter;
+    } catch (error) {
+      console.error('Failed to connect to Neo4j, falling back to JSONL storage:', error instanceof Error ? error.message : String(error));
+      // Fall through to JSONL storage
+    }
+  } else {
+    console.error('Neo4j not configured (NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD), using JSONL storage');
+  }
+
+  // Fall back to JSONL storage
+  const jsonlAdapter = new JsonlStorageAdapter(memoryDirPath);
+  await jsonlAdapter.initialize();
+  console.error('Using JSONL storage at', memoryDirPath);
+  return jsonlAdapter;
 }
 
 // Initialize memory directory path (will be set during startup)
@@ -639,8 +683,12 @@ async function main() {
   // Initialize memory directory path
   MEMORY_DIR_PATH = await ensureMemoryDirectory();
 
-  // Initialize knowledge graph manager with the memory directory path
-  knowledgeGraphManager = new KnowledgeGraphManager(MEMORY_DIR_PATH);
+  // Create storage adapter based on environment variables
+  // Falls back to JSONL if Neo4j is not configured or connection fails
+  const storageAdapter = await createStorageAdapter(MEMORY_DIR_PATH);
+
+  // Initialize knowledge graph manager with the storage adapter
+  knowledgeGraphManager = new KnowledgeGraphManager(MEMORY_DIR_PATH, storageAdapter);
 
   const transport = new StdioServerTransport();
   await server.connect(transport);

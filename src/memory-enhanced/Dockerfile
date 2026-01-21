@@ -18,6 +18,14 @@ COPY --from=builder /app/package.json /app/package.json
 
 ENV NODE_ENV=production
 
+# Environment variables for storage configuration
+# Set these to use Neo4j storage, otherwise JSONL file storage will be used
+# ENV NEO4J_URI=neo4j://localhost:7687
+# ENV NEO4J_USERNAME=neo4j
+# ENV NEO4J_PASSWORD=password
+# ENV NEO4J_DATABASE=neo4j
+# ENV MEMORY_DIR_PATH=/app/memory-data
+
 WORKDIR /app
 
 RUN npm install --omit=dev --ignore-scripts

@@ -1,6 +1,6 @@
 {
   "name": "server-memory-enhanced",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Enhanced MCP server for memory with agent threading, timestamps, and confidence scoring",
   "license": "MIT",
   "mcpName": "io.github.modelcontextprotocol/server-memory-enhanced",
@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.25.2",
+    "neo4j-driver": "^6.0.1",
     "zod": "^3.25.0"
   },
   "devDependencies": {
