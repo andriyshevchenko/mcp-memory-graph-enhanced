@@ -50,6 +50,8 @@ export type { Entity, Relation, KnowledgeGraph } from './lib/types.js';
 export { KnowledgeGraphManager } from './lib/knowledge-graph-manager.js';
 export type { IStorageAdapter } from './lib/storage-interface.js';
 export { JsonlStorageAdapter } from './lib/jsonl-storage-adapter.js';
+export { Neo4jStorageAdapter } from './lib/neo4j-storage-adapter.js';
+export type { Neo4jConfig } from './lib/neo4j-storage-adapter.js';
 
 let knowledgeGraphManager: KnowledgeGraphManager;
 
