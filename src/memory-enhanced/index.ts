@@ -2,14 +2,14 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { ensureMemoryDirectory } from './lib/config.js';
-import { KnowledgeGraphManager } from './lib/knowledge-graph-manager.js';
+import { ensureMemoryDirectory } from './core/config.js';
+import { KnowledgeGraphManager } from './core/knowledge-graph-manager.js';
 import { registerTools } from './tools/register-tools.js';
 
 // Re-export types for backward compatibility with tests
-export { Entity, Relation, KnowledgeGraph, Observation } from './lib/types.js';
-export { KnowledgeGraphManager } from './lib/knowledge-graph-manager.js';
-export { ensureMemoryDirectory, defaultMemoryDir } from './lib/config.js';
+export { Entity, Relation, KnowledgeGraph, Observation } from './core/types.js';
+export { KnowledgeGraphManager } from './core/knowledge-graph-manager.js';
+export { ensureMemoryDirectory, defaultMemoryDir } from './core/config.js';
 
 // The server instance
 const server = new McpServer({

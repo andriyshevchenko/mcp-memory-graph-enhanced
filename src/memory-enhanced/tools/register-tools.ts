@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { KnowledgeGraphManager } from '../lib/knowledge-graph-manager.js';
-import { EntitySchema, RelationSchema } from '../lib/schemas.js';
+import { KnowledgeGraphManager } from '../core/knowledge-graph-manager.js';
+import { EntitySchema, RelationSchema } from '../core/schemas.js';
 
 export function registerTools(server: McpServer, knowledgeGraphManager: KnowledgeGraphManager) {
 // Register create_entities tool (DEPRECATED - use save_memory instead)
