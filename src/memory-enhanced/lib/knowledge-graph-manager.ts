@@ -2,202 +2,45 @@
  * KnowledgeGraphManager - Main class for managing the knowledge graph
  */
 
-import { promises as fs } from 'fs';
-import path from 'path';
 import { Entity, Relation, KnowledgeGraph, Observation } from './types.js';
 import { randomUUID } from 'crypto';
+import { IStorageAdapter } from './storage-interface.js';
+import { JsonlStorageAdapter } from './jsonl-storage-adapter.js';
 
 export class KnowledgeGraphManager {
   private static readonly NEGATION_WORDS = new Set(['not', 'no', 'never', 'neither', 'none', 'doesn\'t', 'don\'t', 'isn\'t', 'aren\'t']);
+  private storage: IStorageAdapter;
+  private initializePromise: Promise<void> | null = null;
   
-  constructor(private memoryDirPath: string) {}
-
-  private getThreadFilePath(agentThreadId: string): string {
-    return path.join(this.memoryDirPath, `thread-${agentThreadId}.jsonl`);
+  constructor(memoryDirPath: string, storageAdapter?: IStorageAdapter) {
+    this.storage = storageAdapter || new JsonlStorageAdapter(memoryDirPath);
+    // Lazy initialization - will be called on first operation
   }
 
-  private async loadGraphFromFile(filePath: string): Promise<KnowledgeGraph> {
-    try {
-      const data = await fs.readFile(filePath, "utf-8");
-      const lines = data.split("\n").filter(line => line.trim() !== "");
-      return lines.reduce((graph: KnowledgeGraph, line) => {
-        let item: any;
-        try {
-          item = JSON.parse(line);
-        } catch (parseError) {
-          console.warn(`Skipping malformed JSON line in ${filePath} (line length: ${line.length} chars)`);
-          return graph;
-        }
-        
-        if (item.type === "entity") {
-          // Validate required fields
-          if (!item.name || !item.entityType || !Array.isArray(item.observations) || 
-              !item.agentThreadId || !item.timestamp || 
-              typeof item.confidence !== 'number' || typeof item.importance !== 'number') {
-            console.warn(`Skipping entity with missing required fields in ${filePath}`);
-            return graph;
-          }
-          graph.entities.push({
-            name: item.name,
-            entityType: item.entityType,
-            observations: item.observations,
-            agentThreadId: item.agentThreadId,
-            timestamp: item.timestamp,
-            confidence: item.confidence,
-            importance: item.importance
-          });
-        }
-        if (item.type === "relation") {
-          // Validate required fields
-          if (!item.from || !item.to || !item.relationType || 
-              !item.agentThreadId || !item.timestamp || 
-              typeof item.confidence !== 'number' || typeof item.importance !== 'number') {
-            console.warn(`Skipping relation with missing required fields in ${filePath}`);
-            return graph;
-          }
-          graph.relations.push({
-            from: item.from,
-            to: item.to,
-            relationType: item.relationType,
-            agentThreadId: item.agentThreadId,
-            timestamp: item.timestamp,
-            confidence: item.confidence,
-            importance: item.importance
-          });
-        }
-        return graph;
-      }, { entities: [], relations: [] });
-    } catch (error) {
-      if (error instanceof Error && 'code' in error && (error as any).code === "ENOENT") {
-        return { entities: [], relations: [] };
-      }
-      throw error;
+  /**
+   * Ensure storage is initialized before any operation
+   * This is called automatically by all public methods
+   */
+  private async ensureInitialized(): Promise<void> {
+    if (!this.initializePromise) {
+      this.initializePromise = this.storage.initialize();
     }
-  }
-
-  private async loadGraph(): Promise<KnowledgeGraph> {
-    const files = await fs.readdir(this.memoryDirPath).catch(() => []);
-    const threadFiles = files.filter(f => f.startsWith('thread-') && f.endsWith('.jsonl'));
-    
-    const graphs = await Promise.all(
-      threadFiles.map(f => this.loadGraphFromFile(path.join(this.memoryDirPath, f)))
-    );
-    
-    return graphs.reduce((acc: KnowledgeGraph, graph: KnowledgeGraph) => ({
-      entities: [...acc.entities, ...graph.entities],
-      relations: [...acc.relations, ...graph.relations]
-    }), { entities: [], relations: [] });
-  }
-
-  private async saveGraphForThread(agentThreadId: string, entities: Entity[], relations: Relation[]): Promise<void> {
-    const threadFilePath = this.getThreadFilePath(agentThreadId);
-    const lines = [
-      ...entities.map(e => JSON.stringify({
-        type: "entity",
-        name: e.name,
-        entityType: e.entityType,
-        observations: e.observations,
-        agentThreadId: e.agentThreadId,
-        timestamp: e.timestamp,
-        confidence: e.confidence,
-        importance: e.importance
-      })),
-      ...relations.map(r => JSON.stringify({
-        type: "relation",
-        from: r.from,
-        to: r.to,
-        relationType: r.relationType,
-        agentThreadId: r.agentThreadId,
-        timestamp: r.timestamp,
-        confidence: r.confidence,
-        importance: r.importance
-      })),
-    ];
-    
-    // Avoid creating or keeping empty files when there is no data for this thread
-    if (lines.length === 0) {
-      try {
-        await fs.unlink(threadFilePath);
-      } catch (error) {
-        // Only ignore ENOENT errors (file doesn't exist)
-        if (error instanceof Error && 'code' in error && (error as any).code !== 'ENOENT') {
-          console.warn(`Failed to delete empty thread file ${threadFilePath}:`, error);
-        }
-      }
-      return;
-    }
-    
-    await fs.writeFile(threadFilePath, lines.join("\n"));
-  }
-
-  private async saveGraph(graph: KnowledgeGraph): Promise<void> {
-    // Group entities and relations by agentThreadId
-    const threadMap = new Map<string, { entities: Entity[], relations: Relation[] }>();
-    
-    for (const entity of graph.entities) {
-      if (!threadMap.has(entity.agentThreadId)) {
-        threadMap.set(entity.agentThreadId, { entities: [], relations: [] });
-      }
-      threadMap.get(entity.agentThreadId)!.entities.push(entity);
-    }
-    
-    for (const relation of graph.relations) {
-      if (!threadMap.has(relation.agentThreadId)) {
-        threadMap.set(relation.agentThreadId, { entities: [], relations: [] });
-      }
-      threadMap.get(relation.agentThreadId)!.relations.push(relation);
-    }
-    
-    // Save each thread's data to its own file
-    await Promise.all(
-      Array.from(threadMap.entries()).map(([threadId, data]) => 
-        this.saveGraphForThread(threadId, data.entities, data.relations)
-      )
-    );
-    
-    // Clean up stale thread files that no longer have data
-    try {
-      const files = await fs.readdir(this.memoryDirPath).catch(() => []);
-      const threadFiles = files.filter(f => f.startsWith('thread-') && f.endsWith('.jsonl'));
-      
-      await Promise.all(
-        threadFiles.map(async (fileName) => {
-          // Extract threadId from filename: thread-{agentThreadId}.jsonl
-          const match = fileName.match(/^thread-(.+)\.jsonl$/);
-          if (match) {
-            const threadId = match[1];
-            if (!threadMap.has(threadId)) {
-              const filePath = path.join(this.memoryDirPath, fileName);
-              try {
-                await fs.unlink(filePath);
-              } catch (error) {
-                // Only log non-ENOENT errors
-                if (error instanceof Error && 'code' in error && (error as any).code !== 'ENOENT') {
-                  console.warn(`Failed to delete stale thread file ${filePath}:`, error);
-                }
-              }
-            }
-          }
-        })
-      );
-    } catch (error) {
-      // Best-effort cleanup: log but don't fail the save operation
-      console.warn('Failed to clean up stale thread files:', error);
-    }
+    await this.initializePromise;
   }
 
   async createEntities(entities: Entity[]): Promise<Entity[]> {
-    const graph = await this.loadGraph();
+    await this.ensureInitialized();
+    const graph = await this.storage.loadGraph();
     // Entity names are globally unique across all threads in the collaborative knowledge graph
     // This prevents duplicate entities while allowing multiple threads to contribute to the same entity
     const newEntities = entities.filter(e => !graph.entities.some(existingEntity => existingEntity.name === e.name));
     graph.entities.push(...newEntities);
-    await this.saveGraph(graph);
+    await this.storage.saveGraph(graph);
     return newEntities;
   }
 
   async createRelations(relations: Relation[]): Promise<Relation[]> {
-    const graph = await this.loadGraph();
+    const graph = await this.storage.loadGraph();
     
     // Validate that referenced entities exist
     const entityNames = new Set(graph.entities.map(e => e.name));
@@ -217,12 +60,12 @@ export class KnowledgeGraphManager {
       existingRelation.relationType === r.relationType
     ));
     graph.relations.push(...newRelations);
-    await this.saveGraph(graph);
+    await this.storage.saveGraph(graph);
     return newRelations;
   }
 
   async addObservations(observations: { entityName: string; contents: string[]; agentThreadId: string; timestamp: string; confidence: number; importance: number }[]): Promise<{ entityName: string; addedObservations: Observation[] }[]> {
-    const graph = await this.loadGraph();
+    const graph = await this.storage.loadGraph();
     const results = observations.map(o => {
       const entity = graph.entities.find(e => e.name === o.entityName);
       if (!entity) {
@@ -265,19 +108,19 @@ export class KnowledgeGraphManager {
       
       return { entityName: o.entityName, addedObservations: newObservations };
     });
-    await this.saveGraph(graph);
+    await this.storage.saveGraph(graph);
     return results;
   }
 
   async deleteEntities(entityNames: string[]): Promise<void> {
-    const graph = await this.loadGraph();
+    const graph = await this.storage.loadGraph();
     graph.entities = graph.entities.filter(e => !entityNames.includes(e.name));
     graph.relations = graph.relations.filter(r => !entityNames.includes(r.from) && !entityNames.includes(r.to));
-    await this.saveGraph(graph);
+    await this.storage.saveGraph(graph);
   }
 
   async deleteObservations(deletions: { entityName: string; observations: string[] }[]): Promise<void> {
-    const graph = await this.loadGraph();
+    const graph = await this.storage.loadGraph();
     deletions.forEach(d => {
       const entity = graph.entities.find(e => e.name === d.entityName);
       if (entity) {
@@ -287,11 +130,11 @@ export class KnowledgeGraphManager {
         );
       }
     });
-    await this.saveGraph(graph);
+    await this.storage.saveGraph(graph);
   }
 
   async deleteRelations(relations: Relation[]): Promise<void> {
-    const graph = await this.loadGraph();
+    const graph = await this.storage.loadGraph();
     // Delete relations globally across all threads by matching (from, to, relationType)
     // In a collaborative knowledge graph, deletions affect all threads
     graph.relations = graph.relations.filter(r => !relations.some(delRelation => 
@@ -299,15 +142,15 @@ export class KnowledgeGraphManager {
       r.to === delRelation.to && 
       r.relationType === delRelation.relationType
     ));
-    await this.saveGraph(graph);
+    await this.storage.saveGraph(graph);
   }
 
   async readGraph(): Promise<KnowledgeGraph> {
-    return this.loadGraph();
+    return this.storage.loadGraph();
   }
 
   async searchNodes(query: string): Promise<KnowledgeGraph> {
-    const graph = await this.loadGraph();
+    const graph = await this.storage.loadGraph();
     
     // Filter entities
     const filteredEntities = graph.entities.filter(e => 
@@ -333,7 +176,7 @@ export class KnowledgeGraphManager {
   }
 
   async openNodes(names: string[]): Promise<KnowledgeGraph> {
-    const graph = await this.loadGraph();
+    const graph = await this.storage.loadGraph();
     
     // Filter entities
     const filteredEntities = graph.entities.filter(e => names.includes(e.name));
@@ -362,7 +205,7 @@ export class KnowledgeGraphManager {
     importanceMin?: number;
     importanceMax?: number;
   }): Promise<KnowledgeGraph> {
-    const graph = await this.loadGraph();
+    const graph = await this.storage.loadGraph();
     
     // If no filters provided, return entire graph
     if (!filters) {
@@ -425,7 +268,7 @@ export class KnowledgeGraphManager {
     avgImportance: number;
     recentActivity: { timestamp: string; entityCount: number }[];
   }> {
-    const graph = await this.loadGraph();
+    const graph = await this.storage.loadGraph();
     
     // Count entity types
     const entityTypes: { [type: string]: number } = {};
@@ -476,7 +319,7 @@ export class KnowledgeGraphManager {
 
   // Enhancement 2: Get recent changes
   async getRecentChanges(since: string): Promise<KnowledgeGraph> {
-    const graph = await this.loadGraph();
+    const graph = await this.storage.loadGraph();
     const sinceDate = new Date(since);
     
     // Only return entities and relations that were actually modified since the specified time
@@ -497,7 +340,7 @@ export class KnowledgeGraphManager {
     path: string[];
     relations: Relation[];
   }> {
-    const graph = await this.loadGraph();
+    const graph = await this.storage.loadGraph();
     
     if (from === to) {
       return { found: true, path: [from], relations: [] };
@@ -569,7 +412,7 @@ export class KnowledgeGraphManager {
     entityName: string;
     conflicts: { obs1: string; obs2: string; reason: string }[];
   }[]> {
-    const graph = await this.loadGraph();
+    const graph = await this.storage.loadGraph();
     const conflicts: { entityName: string; conflicts: { obs1: string; obs2: string; reason: string }[] }[] = [];
     
     for (const entity of graph.entities) {
@@ -623,7 +466,7 @@ export class KnowledgeGraphManager {
     importanceLessThan?: number;
     keepMinEntities?: number;
   }): Promise<{ removedEntities: number; removedRelations: number }> {
-    const graph = await this.loadGraph();
+    const graph = await this.storage.loadGraph();
     const initialEntityCount = graph.entities.length;
     const initialRelationCount = graph.relations.length;
     
@@ -661,7 +504,7 @@ export class KnowledgeGraphManager {
     
     graph.entities = entitiesToKeep;
     graph.relations = relationsToKeep;
-    await this.saveGraph(graph);
+    await this.storage.saveGraph(graph);
     
     return {
       removedEntities: initialEntityCount - entitiesToKeep.length,
@@ -676,7 +519,7 @@ export class KnowledgeGraphManager {
     importance?: number;
     addObservations?: string[];
   }[]): Promise<{ updated: number; notFound: string[] }> {
-    const graph = await this.loadGraph();
+    const graph = await this.storage.loadGraph();
     let updated = 0;
     const notFound: string[] = [];
     
@@ -717,13 +560,13 @@ export class KnowledgeGraphManager {
       updated++;
     }
     
-    await this.saveGraph(graph);
+    await this.storage.saveGraph(graph);
     return { updated, notFound };
   }
 
   // Enhancement 7: Flag for review (Human-in-the-Loop)
   async flagForReview(entityName: string, reason: string, reviewer?: string): Promise<void> {
-    const graph = await this.loadGraph();
+    const graph = await this.storage.loadGraph();
     const entity = graph.entities.find(e => e.name === entityName);
     
     if (!entity) {
@@ -747,13 +590,13 @@ export class KnowledgeGraphManager {
       
       entity.observations.push(flagObservation);
       entity.timestamp = new Date().toISOString();
-      await this.saveGraph(graph);
+      await this.storage.saveGraph(graph);
     }
   }
 
   // Enhancement 8: Get entities flagged for review
   async getFlaggedEntities(): Promise<Entity[]> {
-    const graph = await this.loadGraph();
+    const graph = await this.storage.loadGraph();
     return graph.entities.filter(e => 
       e.observations.some(obs => obs.content.includes('[FLAGGED FOR REVIEW:'))
     );
@@ -761,7 +604,7 @@ export class KnowledgeGraphManager {
 
   // Enhancement 9: Get context (entities related to a topic/entity)
   async getContext(entityNames: string[], depth: number = 1): Promise<KnowledgeGraph> {
-    const graph = await this.loadGraph();
+    const graph = await this.storage.loadGraph();
     const contextEntityNames = new Set<string>(entityNames);
     
     // Expand to include related entities up to specified depth
@@ -803,7 +646,7 @@ export class KnowledgeGraphManager {
       firstCreated: string;
     }>;
   }> {
-    const graph = await this.loadGraph();
+    const graph = await this.storage.loadGraph();
     
     // Group data by agent thread
     const threadMap = new Map<string, {
@@ -876,7 +719,7 @@ export class KnowledgeGraphManager {
       reason: 'no_relations' | 'broken_relation';
     }>;
   }> {
-    const graph = await this.loadGraph();
+    const graph = await this.storage.loadGraph();
     
     // Filter to thread-specific data
     const threadEntities = graph.entities.filter(e => e.agentThreadId === threadId);
@@ -978,7 +821,7 @@ export class KnowledgeGraphManager {
 
   // Observation Versioning: Get full history chain for an observation
   async getObservationHistory(entityName: string, observationId: string): Promise<Observation[]> {
-    const graph = await this.loadGraph();
+    const graph = await this.storage.loadGraph();
     
     // Find the entity
     const entity = graph.entities.find(e => e.name === entityName);
