@@ -20,14 +20,15 @@ import {
  */
 function countSentences(text: string): number {
   // Patterns to ignore - technical content that contains periods but aren't sentence boundaries
+  // NOTE: Order matters! More specific patterns (multi-letter abbreviations) must come before more general patterns
   const patternsToIgnore = [
     /https?:\/\/[^\s]+/g,                                                      // URLs (http:// or https://) - allows periods in paths
     /\b\d+\.\d+\.\d+\.\d+\b/g,                                                 // IP addresses (e.g., 192.168.1.1)
     /\b[A-Za-z]:[\\\/](?:[^\s<>:"|?*]+(?:\s+[^\s<>:"|?*]+)*)/g,               // Windows/Unix paths (handles spaces, e.g., C:\Program Files\...)
     /\b[vV]?\d+\.\d+(\.\d+)*\b/g,                                              // Version numbers (e.g., v1.2.0, 5.4.3)
-    /\b[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?){2,}\b/g,  // Hostnames/domains with at least 2 dots (e.g., sub.domain.com) - requires minimum length to avoid abbreviations
-    /\b[A-Z][a-z]{0,3}\./g,                                                    // Common abbreviations (e.g., Dr., Mr., Mrs., Ms., Jr., Sr., etc.)
-    /\b(?:[A-Z]\.){2,}/g,                                                      // Multi-letter abbreviations (e.g., U.S., U.K., U.S.A., P.D.F., I.B.M., etc.)
+    /\b(?:[A-Z]\.){2,}/g,                                                      // Multi-letter abbreviations (e.g., U.S., U.K., U.S.A., P.D.F., I.B.M., etc.) - must come before single-letter pattern
+    /\b[A-Z][a-z]{0,3}\./g,                                                    // Common single-letter abbreviations (e.g., Dr., Mr., Mrs., Ms., Jr., Sr., etc.)
+    /\b[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?){2,}\b/g,  // Hostnames/domains with at least 2 dots (e.g., sub.domain.com) - must come after all abbreviation patterns
   ];
   
   // Replace technical patterns with placeholders to prevent false sentence detection
