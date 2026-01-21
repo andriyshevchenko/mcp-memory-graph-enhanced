@@ -56,7 +56,7 @@ The server stores data in separate JSONL files per agent thread:
 
 ### ⭐ Recommended Tool (New)
 1. **save_memory**: **[RECOMMENDED]** Unified tool for creating entities and relations atomically with server-side validation
-   - Enforces observation limits (max 150 chars, 2 sentences per observation)
+   - Enforces observation limits (max 150 chars, 3 sentences per observation, ignoring periods in version numbers)
    - Requires at least 1 relation per entity (prevents orphaned nodes)
    - Free-form entity types with soft normalization
    - Atomic transactions (all-or-nothing)
@@ -196,7 +196,7 @@ The `save_memory` tool is the recommended way to create entities and relations. 
    - ✅ Good: `"Works at Google"`, `"Lives in San Francisco"`
    - ❌ Bad: `"Works at Google and lives in San Francisco and has a PhD in Computer Science"`
    - **Max length**: 150 characters per observation
-   - **Max sentences**: 2 sentences per observation (one fact = one observation is ideal)
+   - **Max sentences**: 3 sentences per observation (technical content with version numbers supported)
 
 2. **Mandatory Relations**: Every entity must connect to at least one other entity
    - ✅ Good: `{ targetEntity: "Google", relationType: "works at" }`

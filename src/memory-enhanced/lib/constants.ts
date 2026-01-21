@@ -12,8 +12,9 @@ export const MAX_OBSERVATION_LENGTH = 150;
 /**
  * Maximum number of sentences allowed per observation
  * Per spec Section 2: Hard Limits on Observation Length
+ * Increased to 3 to accommodate technical facts with version numbers and metrics
  */
-export const MAX_SENTENCES = 2;
+export const MAX_SENTENCES = 3;
 
 /**
  * Minimum observation length in characters

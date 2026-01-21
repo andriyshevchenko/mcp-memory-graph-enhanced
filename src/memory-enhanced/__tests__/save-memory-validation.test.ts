@@ -23,10 +23,15 @@ describe('Observation Validation', () => {
     expect(result.error).toContain('151 chars');
   });
 
-  it('should reject observations with more than 2 sentences', () => {
-    const result = validateObservation('First sentence. Second sentence. Third sentence.');
+  it('should reject observations with more than 3 sentences', () => {
+    const result = validateObservation('First sentence. Second sentence. Third sentence. Fourth sentence.');
     expect(result.valid).toBe(false);
     expect(result.error).toContain('Too many sentences');
+  });
+
+  it('should accept observations with exactly 3 sentences', () => {
+    const result = validateObservation('First sentence. Second sentence. Third sentence.');
+    expect(result.valid).toBe(true);
   });
 
   it('should accept observations with exactly 2 sentences', () => {
@@ -38,6 +43,51 @@ describe('Observation Validation', () => {
     const obs = 'a'.repeat(150);
     const result = validateObservation(obs);
     expect(result.valid).toBe(true);
+  });
+
+  it('should accept version numbers without counting periods as sentences', () => {
+    const result = validateObservation('Library: python-docx version 1.2.0');
+    expect(result.valid).toBe(true);
+  });
+
+  it('should accept observations with version numbers and additional info', () => {
+    const result = validateObservation('Using pytest v5.4.3 for testing');
+    expect(result.valid).toBe(true);
+  });
+
+  it('should accept observations with decimal numbers', () => {
+    const result = validateObservation('API version 2.1.0 is stable');
+    expect(result.valid).toBe(true);
+  });
+
+  it('should accept observations with numeric metrics', () => {
+    const result1 = validateObservation('10 replaced with 21 numbers');
+    expect(result1.valid).toBe(true);
+    
+    const result2 = validateObservation('26 rows deleted, 21 added');
+    expect(result2.valid).toBe(true);
+  });
+
+  it('should accept observations with decimal numbers', () => {
+    const result1 = validateObservation('Accuracy improved to 3.14 percent');
+    expect(result1.valid).toBe(true);
+    
+    const result2 = validateObservation('Temperature is 98.6 degrees');
+    expect(result2.valid).toBe(true);
+    
+    const result3 = validateObservation('PI is approximately 3.14159');
+    expect(result3.valid).toBe(true);
+  });
+
+  it('should still correctly count actual sentences with version numbers', () => {
+    const result = validateObservation('Version 1.0 released. Bug fixes applied. Documentation updated.');
+    expect(result.valid).toBe(true); // 3 sentences, at the limit
+  });
+
+  it('should reject observations with too many actual sentences despite version numbers', () => {
+    const result = validateObservation('Version 1.0 released. Bug fixes applied. Documentation updated. Tests passed.');
+    expect(result.valid).toBe(false);
+    expect(result.error).toContain('Too many sentences');
   });
 });
 

@@ -84,9 +84,19 @@ interface SaveMemoryOutput {
 
 #### Rules:
 ```typescript
+function countSentences(text: string): number {
+  // Remove version numbers (e.g., 1.2.0, v5.4.3, V2.1.0) and decimal numbers before counting
+  // Using explicit case handling [vV] for version prefix
+  const cleaned = text
+    .replace(/\b[vV]?\d+\.\d+(\.\d+)*\b/g, 'VERSION'); // handles version numbers and decimals
+  
+  const sentences = cleaned.split(/[.!?]/).filter(s => s.trim().length > 0);
+  return sentences.length;
+}
+
 function validateObservation(obs: string): ValidationResult {
   const MAX_LENGTH = 150;  // Characters
-  const MAX_SENTENCES = 2;  // Simple count by periods
+  const MAX_SENTENCES = 3;  // Ignoring periods in version numbers
   
   if (obs.length > MAX_LENGTH) {
     return {
@@ -95,11 +105,11 @@ function validateObservation(obs: string): ValidationResult {
     };
   }
   
-  const sentences = obs.split(/[.!?]/).filter(s => s.trim().length > 0);
-  if (sentences.length > MAX_SENTENCES) {
+  const sentenceCount = countSentences(obs);
+  if (sentenceCount > MAX_SENTENCES) {
     return {
       valid: false,
-      error: `Too many sentences (${sentences.length}). Max ${MAX_SENTENCES}. One fact per observation.`
+      error: `Too many sentences (${sentenceCount}). Max ${MAX_SENTENCES}. One fact per observation.`
     };
   }
   
@@ -314,7 +324,7 @@ interface Observation {
    - Atomic transaction (all-or-nothing)
    
 2. Add server-side validation
-   - Observation length: max 150 chars, max 2 sentences
+   - Observation length: max 150 chars, max 3 sentences (ignoring periods in version numbers)
    - Relations: min 1 per entity
    - Clear error messages with examples
    
@@ -432,8 +442,8 @@ interface Observation {
 {
   "error": "Validation failed",
   "entity": "Portfolio Document",
-  "observation": "Contains 2 main tables: planning (Section I) and activities (Section II) with 21 records and appendices with certificates",
-  "problem": "Too long (115 chars, 3 sentences). Max 150 chars, 2 sentences.",
+  "observation": "Contains 2 main tables. Planning is in Section I. Activities are in Section II with 21 records. Appendices contain certificates.",
+  "problem": "Too many sentences (4). Max 3.",
   "suggestion": "Split into 3 observations: 1) 'Contains planning table (Section I)', 2) 'Contains activities table (Section II) with 21 records', 3) 'Appendices contain certificates'"
 }
 ```
