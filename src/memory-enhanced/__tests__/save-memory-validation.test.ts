@@ -16,11 +16,24 @@ describe('Observation Validation', () => {
   });
 
   it('should reject observations over 150 characters', () => {
-    const longObs = 'a'.repeat(151);
+    const longObs = 'a'.repeat(301);
     const result = validateObservation(longObs);
     expect(result.valid).toBe(false);
     expect(result.error).toContain('too long');
-    expect(result.error).toContain('151 chars');
+    expect(result.error).toContain('301 chars');
+  });
+
+  it('should accept observations up to 300 characters', () => {
+    const maxLengthObs = 'a'.repeat(300);
+    const result = validateObservation(maxLengthObs);
+    expect(result.valid).toBe(true);
+  });
+
+  it('should accept technical observations with URLs within 300 chars', () => {
+    const technicalObs = 'API endpoint at https://api-gateway.production.company.com/v2/services/authentication handles OAuth2 with JWT tokens, 30s timeout, rate limit 1000/min';
+    expect(technicalObs.length).toBeLessThanOrEqual(300);
+    const result = validateObservation(technicalObs);
+    expect(result.valid).toBe(true);
   });
 
   it('should reject observations with more than 3 sentences', () => {
@@ -299,7 +312,7 @@ describe('Save Memory Request Validation', () => {
       {
         name: 'Entity1',
         entityType: 'person',
-        observations: ['a'.repeat(151)], // Too long
+        observations: ['a'.repeat(301)], // Too long
         relations: [] // No relations
       }
     ];

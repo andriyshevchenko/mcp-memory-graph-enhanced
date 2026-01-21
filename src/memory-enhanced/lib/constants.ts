@@ -6,8 +6,9 @@
 /**
  * Maximum length for observations in characters
  * Per spec Section 2: Hard Limits on Observation Length
+ * Increased to 300 to accommodate technical content (URLs, connection strings, etc.)
  */
-export const MAX_OBSERVATION_LENGTH = 150;
+export const MAX_OBSERVATION_LENGTH = 300;
 
 /**
  * Maximum number of sentences allowed per observation

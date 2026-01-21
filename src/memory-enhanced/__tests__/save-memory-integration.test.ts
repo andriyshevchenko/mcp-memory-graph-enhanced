@@ -69,7 +69,7 @@ describe('Save Memory Handler - Integration Tests', () => {
         {
           name: 'Test',
           entityType: 'Test',
-          observations: ['a'.repeat(151)], // Too long
+          observations: ['a'.repeat(301)], // Too long
           relations: [{ targetEntity: 'Other', relationType: 'relates to' }]
         },
         {
@@ -468,7 +468,7 @@ describe('Save Memory Handler - Integration Tests', () => {
           {
             name: 'InvalidEntity',
             entityType: 'Test',
-            observations: ['a'.repeat(151)], // Too long
+            observations: ['a'.repeat(301)], // Too long
             relations: [] // No relations - invalid
           }
         ],
@@ -500,7 +500,7 @@ describe('Save Memory Handler - Integration Tests', () => {
     });
 
     it('should include observation preview in error details', async () => {
-      const longObservation = 'This is a very long observation that exceeds the maximum allowed length for observations in the system. It keeps going and going to make sure it is definitely over the 150 character limit that is enforced.';
+      const longObservation = 'This is a very long observation that exceeds the maximum allowed length for observations in the system. It keeps going and going to make sure it is definitely over the 300 character limit that is now enforced for technical content. We need to add even more text here to reach that limit and demonstrate the preview feature working correctly.';
       const input: SaveMemoryInput = {
         entities: [
           {
@@ -537,7 +537,7 @@ describe('Save Memory Handler - Integration Tests', () => {
           {
             name: 'MultiErrorEntity',
             entityType: 'Test',
-            observations: ['a'.repeat(151), 'First. Second. Third. Fourth.'], // One too long, one too many sentences
+            observations: ['a'.repeat(301), 'First. Second. Third. Fourth.'], // One too long, one too many sentences
             relations: [] // No relations - invalid
           }
         ],
@@ -572,7 +572,7 @@ describe('Save Memory Handler - Integration Tests', () => {
           {
             name: 'Entity2',
             entityType: 'Test',
-            observations: ['x'.repeat(151)], // Invalid
+            observations: ['x'.repeat(301)], // Invalid
             relations: [{ targetEntity: 'Entity1', relationType: 'relates to' }]
           },
           {

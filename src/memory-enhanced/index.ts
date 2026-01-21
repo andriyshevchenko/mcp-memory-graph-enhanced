@@ -147,7 +147,7 @@ server.registerTool(
   "save_memory",
   {
     title: "Save Memory",
-    description: "Save entities and their relations to memory graph atomically. RULES: 1) Each observation max 150 chars (atomic facts only). 2) Each entity MUST have at least 1 relation. This is the recommended way to create entities and relations.",
+    description: "Save entities and their relations to memory graph atomically. RULES: 1) Each observation max 300 chars (atomic facts, technical content supported). 2) Each entity MUST have at least 1 relation. This is the recommended way to create entities and relations.",
     inputSchema: SaveMemoryInputSchema,
     outputSchema: SaveMemoryOutputSchema
   },

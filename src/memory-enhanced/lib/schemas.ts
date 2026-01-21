@@ -51,8 +51,8 @@ export const SaveMemoryEntitySchema = z.object({
     "Type of entity (e.g., Person, Document, File, or custom types like Patient, API). Convention: start with capital letter."
   ),
   observations: z.array(
-    z.string().min(5).max(150).describe("Atomic fact, max 150 chars")
-  ).min(1).describe("Array of atomic facts. Each must be ONE fact, max 150 chars."),
+    z.string().min(5).max(300).describe("Atomic fact, max 300 chars (increased to accommodate technical content)")
+  ).min(1).describe("Array of atomic facts. Each must be ONE fact, max 300 chars."),
   relations: z.array(SaveMemoryRelationSchema)
     .min(1)
     .describe("REQUIRED: Every entity must have at least 1 relation"),
