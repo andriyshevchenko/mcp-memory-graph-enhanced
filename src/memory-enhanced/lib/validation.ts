@@ -5,6 +5,7 @@
 import { ValidationResult, SaveMemoryEntity } from './types.js';
 import { 
   MAX_OBSERVATION_LENGTH, 
+  MIN_OBSERVATION_LENGTH,
   MAX_SENTENCES, 
   SENTENCE_TERMINATORS,
   TARGET_AVG_RELATIONS,
@@ -14,10 +15,19 @@ import {
 
 /**
  * Validates a single observation according to spec requirements:
+ * - Min 5 characters
  * - Max 150 characters
  * - Max 2 sentences (simple count by periods)
  */
 export function validateObservation(obs: string): ValidationResult {
+  if (obs.length < MIN_OBSERVATION_LENGTH) {
+    return {
+      valid: false,
+      error: `Observation too short (${obs.length} chars). Min ${MIN_OBSERVATION_LENGTH}.`,
+      suggestion: `Provide more meaningful content.`
+    };
+  }
+  
   if (obs.length > MAX_OBSERVATION_LENGTH) {
     return {
       valid: false,
@@ -86,10 +96,12 @@ export function normalizeEntityType(entityType: string): { normalized: string; w
     warnings.push(`EntityType '${entityType}' should start with capital letter. Normalized to '${normalized}'.`);
   }
   
-  // Warn about spaces in type
-  if (entityType.includes(' ')) {
-    const suggested = entityType.split(' ')
-      .filter(word => word.length > 0) // Filter empty strings
+  // Warn about spaces in type and handle multiple consecutive spaces
+  if (/\s/.test(entityType)) {
+    // Replace multiple spaces with single space and trim
+    const condensed = entityType.replace(/\s+/g, ' ').trim();
+    const suggested = condensed
+      .split(' ')
       .map(word => word[0].toUpperCase() + word.slice(1))
       .join('');
     warnings.push(`EntityType '${entityType}' contains spaces. Consider using '${suggested}' instead.`);

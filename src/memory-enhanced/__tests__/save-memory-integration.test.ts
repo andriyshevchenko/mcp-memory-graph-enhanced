@@ -148,14 +148,14 @@ describe('Save Memory Handler - Integration Tests', () => {
         {
           name: 'Entity1',
           entityType: 'Test',
-          observations: ['Test'],
+          observations: ['Test observation'],
           relations: [{ targetEntity: 'Entity2', relationType: 'relates to' }]
           // No confidence or importance specified
         },
         {
           name: 'Entity2',
           entityType: 'Test',
-          observations: ['Test'],
+          observations: ['Test observation'],
           relations: [{ targetEntity: 'Entity1', relationType: 'relates to' }]
         }
       ],
@@ -184,7 +184,7 @@ describe('Save Memory Handler - Integration Tests', () => {
         {
           name: 'Entity1',
           entityType: 'Test',
-          observations: ['Test'],
+          observations: ['Test observation'],
           relations: [{ 
             targetEntity: 'Entity2', 
             relationType: 'relates to',
@@ -196,7 +196,7 @@ describe('Save Memory Handler - Integration Tests', () => {
         {
           name: 'Entity2',
           entityType: 'Test',
-          observations: ['Test'],
+          observations: ['Test observation'],
           relations: [{ targetEntity: 'Entity1', relationType: 'relates to' }]
         }
       ],
@@ -266,13 +266,13 @@ describe('Save Memory Handler - Integration Tests', () => {
         {
           name: 'Entity1',
           entityType: 'person', // Lowercase - should warn
-          observations: ['Test'],
+          observations: ['Test observation'],
           relations: [{ targetEntity: 'Entity2', relationType: 'knows' }]
         },
         {
           name: 'Entity2',
           entityType: 'API Key', // Spaces - should warn
-          observations: ['Test'],
+          observations: ['Test observation'],
           relations: [{ targetEntity: 'Entity1', relationType: 'owned by' }]
         }
       ],

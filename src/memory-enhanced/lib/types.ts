@@ -11,8 +11,8 @@ export interface Observation {
   supersedes?: string;     // ID of previous observation (if this is an update)
   superseded_by?: string;  // ID of observation that supersedes this one
   agentThreadId: string;   // Thread that created this observation
-  confidence: number;      // 0-1: confidence in accuracy
-  importance: number;      // 0-1: importance for memory integrity
+  confidence?: number;     // 0-1: confidence in accuracy (optional, inherits from entity if not set)
+  importance?: number;     // 0-1: importance for memory integrity (optional, inherits from entity if not set)
 }
 
 // Enhanced entity with metadata

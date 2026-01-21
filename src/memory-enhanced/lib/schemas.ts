@@ -13,8 +13,8 @@ export const ObservationSchema = z.object({
   supersedes: z.string().optional().describe("ID of previous observation (if this is an update)"),
   superseded_by: z.string().optional().describe("ID of observation that supersedes this one"),
   agentThreadId: z.string().describe("Thread that created this observation"),
-  confidence: z.number().min(0).max(1).describe("Confidence in accuracy (0-1)"),
-  importance: z.number().min(0).max(1).describe("Importance for memory integrity (0-1)")
+  confidence: z.number().min(0).max(1).optional().describe("Confidence in accuracy (0-1, optional, inherits from entity if not set)"),
+  importance: z.number().min(0).max(1).optional().describe("Importance for memory integrity (0-1, optional, inherits from entity if not set)")
 });
 
 // Schema for existing tools
