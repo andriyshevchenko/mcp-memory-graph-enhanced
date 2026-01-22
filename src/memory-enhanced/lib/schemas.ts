@@ -149,3 +149,20 @@ export const ValidateMemoryOutputSchema = z.object({
     warnings: z.array(z.string()).describe("List of validation warnings")
   })).describe("Validation results for each entity")
 });
+
+// Schema for update_observation tool
+export const UpdateObservationInputSchema = z.object({
+  entityName: z.string().min(1).describe("Name of the entity containing the observation"),
+  observationId: z.string().min(1).describe("ID of the observation to update"),
+  newContent: z.string().min(5).max(300).describe("New content for the observation (max 300 chars)"),
+  agentThreadId: z.string().min(1).describe("Agent thread ID making this update"),
+  timestamp: z.string().describe("ISO 8601 timestamp of the update"),
+  confidence: z.number().min(0).max(1).optional().describe("Optional confidence score (0-1), inherits from old observation if not provided"),
+  importance: z.number().min(0).max(1).optional().describe("Optional importance score (0-1), inherits from old observation if not provided")
+});
+
+export const UpdateObservationOutputSchema = z.object({
+  success: z.boolean(),
+  updatedObservation: ObservationSchema.describe("The new version of the observation"),
+  message: z.string()
+});

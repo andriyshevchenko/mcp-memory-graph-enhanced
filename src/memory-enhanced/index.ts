@@ -22,7 +22,9 @@ import {
   ListEntitiesInputSchema,
   ListEntitiesOutputSchema,
   ValidateMemoryInputSchema,
-  ValidateMemoryOutputSchema
+  ValidateMemoryOutputSchema,
+  UpdateObservationInputSchema,
+  UpdateObservationOutputSchema
 } from './lib/schemas.js';
 import { handleSaveMemory } from './lib/save-memory-handler.js';
 import { validateSaveMemoryRequest } from './lib/validation.js';
@@ -340,6 +342,36 @@ server.registerTool(
     return {
       content: [{ type: "text" as const, text: "Observations deleted successfully" }],
       structuredContent: { success: true, message: "Observations deleted successfully" }
+    };
+  }
+);
+
+// Register update_observation tool
+server.registerTool(
+  "update_observation",
+  {
+    title: "Update Observation",
+    description: "Update an existing observation by creating a new version with updated content. This maintains version history through the supersedes/superseded_by chain.",
+    inputSchema: UpdateObservationInputSchema.shape,
+    outputSchema: UpdateObservationOutputSchema.shape
+  },
+  async ({ entityName, observationId, newContent, agentThreadId, timestamp, confidence, importance }) => {
+    const updatedObservation = await knowledgeGraphManager.updateObservation({
+      entityName,
+      observationId,
+      newContent,
+      agentThreadId,
+      timestamp,
+      confidence,
+      importance
+    });
+    return {
+      content: [{ type: "text" as const, text: `Observation updated successfully. New version: ${updatedObservation.id} (v${updatedObservation.version})` }],
+      structuredContent: { 
+        success: true, 
+        updatedObservation, 
+        message: `Observation updated successfully. New version: ${updatedObservation.id} (v${updatedObservation.version})`
+      }
     };
   }
 );

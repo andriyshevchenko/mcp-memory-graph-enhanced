@@ -133,6 +133,59 @@ export class KnowledgeGraphManager {
     await this.storage.saveGraph(graph);
   }
 
+  async updateObservation(params: {
+    entityName: string;
+    observationId: string;
+    newContent: string;
+    agentThreadId: string;
+    timestamp: string;
+    confidence?: number;
+    importance?: number;
+  }): Promise<Observation> {
+    const graph = await this.storage.loadGraph();
+    
+    // Find the entity
+    const entity = graph.entities.find(e => e.name === params.entityName);
+    if (!entity) {
+      throw new Error(`Entity '${params.entityName}' not found`);
+    }
+    
+    // Find the observation to update
+    const oldObs = entity.observations.find(o => o.id === params.observationId);
+    if (!oldObs) {
+      throw new Error(`Observation '${params.observationId}' not found in entity '${params.entityName}'`);
+    }
+    
+    // Check if observation is already superseded
+    if (oldObs.superseded_by) {
+      throw new Error(`Observation '${params.observationId}' has already been superseded by '${oldObs.superseded_by}'. Update the latest version instead.`);
+    }
+    
+    // Create new version
+    const newObs: Observation = {
+      id: `obs_${randomUUID()}`,
+      content: params.newContent,
+      timestamp: params.timestamp,
+      version: oldObs.version + 1,
+      supersedes: oldObs.id,
+      agentThreadId: params.agentThreadId,
+      confidence: params.confidence ?? oldObs.confidence ?? entity.confidence,
+      importance: params.importance ?? oldObs.importance ?? entity.importance
+    };
+    
+    // Link old observation to new one
+    oldObs.superseded_by = newObs.id;
+    
+    // Add new observation to entity
+    entity.observations.push(newObs);
+    
+    // Update entity timestamp
+    entity.timestamp = params.timestamp;
+    
+    await this.storage.saveGraph(graph);
+    return newObs;
+  }
+
   async deleteRelations(relations: Relation[]): Promise<void> {
     const graph = await this.storage.loadGraph();
     // Delete relations globally across all threads by matching (from, to, relationType)
