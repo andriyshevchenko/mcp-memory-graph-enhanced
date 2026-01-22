@@ -790,6 +790,63 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
       // Should at least return the central entity
       expect(context.entities.some(e => e.name === 'Central')).toBe(true);
     });
+
+    it('should expand context through multiple depth levels', async () => {
+      // Create a chain: A -> B -> C -> D
+      const entities = ['ContextA', 'ContextB', 'ContextC', 'ContextD'].map(name => ({
+        name,
+        entityType: 'Type',
+        observations: [{
+          id: `obs_${name}`,
+          content: 'Test',
+          timestamp: new Date().toISOString(),
+          version: 1,
+          agentThreadId: 'thread1'
+        }],
+        agentThreadId: 'thread1',
+        timestamp: new Date().toISOString(),
+        confidence: 0.9,
+        importance: 0.8
+      }));
+
+      await manager.createEntities(entities);
+
+      await manager.createRelations([
+        {
+          from: 'ContextA',
+          to: 'ContextB',
+          relationType: 'connects',
+          agentThreadId: 'thread1',
+          timestamp: new Date().toISOString(),
+          confidence: 0.9,
+          importance: 0.7
+        },
+        {
+          from: 'ContextB',
+          to: 'ContextC',
+          relationType: 'connects',
+          agentThreadId: 'thread1',
+          timestamp: new Date().toISOString(),
+          confidence: 0.9,
+          importance: 0.7
+        },
+        {
+          from: 'ContextC',
+          to: 'ContextD',
+          relationType: 'connects',
+          agentThreadId: 'thread1',
+          timestamp: new Date().toISOString(),
+          confidence: 0.9,
+          importance: 0.7
+        }
+      ]);
+
+      // Get context with depth 2 from A should include A, B, and C
+      const context = await manager.getContext(['ContextA'], 2);
+
+      expect(context.entities.some(e => e.name === 'ContextA')).toBe(true);
+      expect(context.entities.some(e => e.name === 'ContextB')).toBe(true);
+    });
   });
 
   describe('listConversations', () => {

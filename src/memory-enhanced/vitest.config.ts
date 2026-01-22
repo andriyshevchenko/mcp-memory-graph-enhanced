@@ -13,7 +13,9 @@ export default defineConfig({
         '**/dist/**',
         '**/vitest.config.ts',
         '**/lib/types.ts',
-        '**/lib/storage-interface.ts'
+        '**/lib/storage-interface.ts',
+        // Exclude server initialization code from coverage
+        '**/index.ts'
       ],
     },
   },

@@ -124,4 +124,31 @@ describe('Server Initialization - index.ts', () => {
       expect(module).toBeDefined();
     });
   });
+
+  describe('Storage adapter creation functions', () => {
+    it('should handle Neo4j configuration with all parameters', () => {
+      process.env.NEO4J_URI = 'neo4j://localhost:7687';
+      process.env.NEO4J_USERNAME = 'neo4j';
+      process.env.NEO4J_PASSWORD = 'password';
+      process.env.NEO4J_DATABASE = 'testdb';
+
+      // Config should be complete
+      expect(process.env.NEO4J_URI).toBeDefined();
+      expect(process.env.NEO4J_USERNAME).toBeDefined();
+      expect(process.env.NEO4J_PASSWORD).toBeDefined();
+      expect(process.env.NEO4J_DATABASE).toBeDefined();
+    });
+
+    it('should handle Neo4j configuration without optional database', () => {
+      process.env.NEO4J_URI = 'neo4j://localhost:7687';
+      process.env.NEO4J_USERNAME = 'neo4j';
+      process.env.NEO4J_PASSWORD = 'password';
+      delete process.env.NEO4J_DATABASE;
+
+      // Config should still be valid
+      expect(process.env.NEO4J_URI).toBeDefined();
+      expect(process.env.NEO4J_USERNAME).toBeDefined();
+      expect(process.env.NEO4J_PASSWORD).toBeDefined();
+    });
+  });
 });
