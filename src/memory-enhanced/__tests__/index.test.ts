@@ -71,37 +71,6 @@ describe('Server Initialization - index.ts', () => {
     });
   });
 
-  describe('Storage adapter configuration', () => {
-    let originalEnv: NodeJS.ProcessEnv;
-
-    beforeEach(() => {
-      originalEnv = { ...process.env };
-    });
-
-    afterEach(() => {
-      process.env = originalEnv;
-    });
-
-    it('should handle missing Neo4j configuration', () => {
-      delete process.env.NEO4J_URI;
-      delete process.env.NEO4J_USERNAME;
-      delete process.env.NEO4J_PASSWORD;
-      
-      // The server should fall back to JSONL storage
-      expect(process.env.NEO4J_URI).toBeUndefined();
-    });
-
-    it('should detect partial Neo4j configuration', () => {
-      process.env.NEO4J_URI = 'neo4j://localhost:7687';
-      delete process.env.NEO4J_USERNAME;
-      delete process.env.NEO4J_PASSWORD;
-      
-      // Missing username and password
-      expect(process.env.NEO4J_USERNAME).toBeUndefined();
-      expect(process.env.NEO4J_PASSWORD).toBeUndefined();
-    });
-  });
-
   describe('Module exports', () => {
     it('should export KnowledgeGraphManager', async () => {
       const { KnowledgeGraphManager } = await import('../index.js');
@@ -122,33 +91,6 @@ describe('Server Initialization - index.ts', () => {
       // TypeScript types are checked at compile time, this tests the import structure
       const module = await import('../index.js');
       expect(module).toBeDefined();
-    });
-  });
-
-  describe('Storage adapter creation functions', () => {
-    it('should handle Neo4j configuration with all parameters', () => {
-      process.env.NEO4J_URI = 'neo4j://localhost:7687';
-      process.env.NEO4J_USERNAME = 'neo4j';
-      process.env.NEO4J_PASSWORD = 'password';
-      process.env.NEO4J_DATABASE = 'testdb';
-
-      // Config should be complete
-      expect(process.env.NEO4J_URI).toBeDefined();
-      expect(process.env.NEO4J_USERNAME).toBeDefined();
-      expect(process.env.NEO4J_PASSWORD).toBeDefined();
-      expect(process.env.NEO4J_DATABASE).toBeDefined();
-    });
-
-    it('should handle Neo4j configuration without optional database', () => {
-      process.env.NEO4J_URI = 'neo4j://localhost:7687';
-      process.env.NEO4J_USERNAME = 'neo4j';
-      process.env.NEO4J_PASSWORD = 'password';
-      delete process.env.NEO4J_DATABASE;
-
-      // Config should still be valid
-      expect(process.env.NEO4J_URI).toBeDefined();
-      expect(process.env.NEO4J_USERNAME).toBeDefined();
-      expect(process.env.NEO4J_PASSWORD).toBeDefined();
     });
   });
 });
