@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.1] - 2026-01-22
+
+### Performance
+- **Optimized entity/relation creation** - Replaced O(n²) duplicate detection with Set-based O(n) lookups
+  - Entity creation now uses Set for name deduplication instead of nested array iterations
+  - Relation creation uses JSON.stringify composite keys for collision-safe O(1) deduplication
+  - Significant performance improvement for knowledge graphs with 1000+ entities
+- **Optimized BFS path finding** - Pre-indexed relation lookups reduce repeated array scans
+  - Build Map indexes at start of `findRelationPath()` for O(1) lookups per BFS node
+  - Eliminates repeated O(n) filters of entire relations array
+  - Major performance gain for deep graph traversals
+- **Optimized observation operations** - Single-pass reduce for Set creation eliminates intermediate arrays
+  - `addObservations()` now uses reduce instead of filter+map chain
+  - Removes unnecessary array allocations during duplicate detection
+- **Optimized negation word detection** - Improved word boundary matching without intermediate allocations
+  - Uses `\b[\w']+\b` regex for robust word extraction, keeping contractions (e.g., "don't") as single words
+  - Checks words directly against NEGATION_WORDS Set without creating temporary Set
+  - Avoids unnecessary allocations in O(n²) conflict detection loops
+- **Optimized JSONL serialization** - Direct array building eliminates spread operator overhead
+  - `serializeThreadData()` builds lines array directly instead of using spread operators
+  - Reduces memory allocations during serialization
+
+### Technical Details
+All optimizations maintain thread safety (local variables only), ACID semantics (no transaction changes), and memory integrity (no caching that could violate consistency). Pure internal optimizations with no breaking changes.
+
 ## [2.3.0] - 2026-01-22
 
 ### Added

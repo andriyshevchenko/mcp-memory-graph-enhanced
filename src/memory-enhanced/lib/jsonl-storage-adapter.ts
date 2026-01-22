@@ -285,10 +285,14 @@ export class JsonlStorageAdapter implements IStorageAdapter {
    * Serialize thread data to JSONL lines
    */
   private serializeThreadData(threadData: ThreadData): string[] {
-    return [
-      ...threadData.entities.map(e => this.serializeEntity(e)),
-      ...threadData.relations.map(r => this.serializeRelation(r))
-    ];
+    const lines: string[] = [];
+    for (const e of threadData.entities) {
+      lines.push(this.serializeEntity(e));
+    }
+    for (const r of threadData.relations) {
+      lines.push(this.serializeRelation(r));
+    }
+    return lines;
   }
 
   /**
