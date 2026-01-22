@@ -1,6 +1,6 @@
 # Memory-Enhanced MCP Server
 
-An enhanced version of the Memory MCP server that provides persistent knowledge graph storage with agent threading, timestamps, and confidence scoring.
+An enhanced version of the Anthropic Memory MCP server that provides persistent knowledge graph storage with agent threading, timestamps, and confidence scoring.
 
 ## Features
 
@@ -310,49 +310,6 @@ await bulkUpdate({
 await pruneMemory({ olderThan: "2024-01-01T00:00:00Z", importanceLessThan: 0.3, keepMinEntities: 100 });
 ```
 
-### 🔄 Migration Guide
-
-For users of the old `create_entities` and `create_relations` tools:
-
-#### What Changed
-- **Old approach**: Two separate tools that could be used independently
-  - `create_entities` → creates entities
-  - `create_relations` → creates relations (optional, often skipped by LLMs)
-- **New approach**: Single `save_memory` tool with atomic transactions
-  - Creates entities and relations together
-  - Enforces mandatory relations (at least 1 per entity)
-  - Validates observation length and atomicity
-
-#### Migrating Your Code
-```typescript
-// ❌ OLD WAY (deprecated but still works)
-await create_entities({
-  entities: [{ name: "Alice", entityType: "person", observations: ["works at Google and lives in SF"] }]
-});
-await create_relations({  // Often forgotten!
-  relations: [{ from: "Alice", to: "Bob", relationType: "knows" }]
-});
-
-// ✅ NEW WAY (recommended)
-await save_memory({
-  entities: [
-    {
-      name: "Alice",
-      entityType: "Person",
-      observations: ["Works at Google", "Lives in SF"],  // Split into atomic facts
-      relations: [{ targetEntity: "Bob", relationType: "knows" }]  // Required!
-    }
-  ],
-  threadId: "conversation-001"
-});
-```
-
-#### Migration Strategy
-1. **Old tools remain available**: `create_entities` and `create_relations` are deprecated but not removed
-2. **No forced migration**: Update your code gradually at your own pace
-3. **New code should use `save_memory`**: Benefits from validation and atomic transactions
-4. **Observation versioning**: New installations use versioned observations (breaking change for data model)
-
 ## Development
 
 ### Build
@@ -373,27 +330,6 @@ npm run test
 npm run watch
 ```
 
-## License
-
-MIT
-
-## 🤝 Contributing
-
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-## 🔒 Security
-
-See [SECURITY.MD](SECURITY.md) for reporting security vulnerabilities.
-
 ## 📜 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 💬 Community
-
-- [GitHub Discussions](https://github.com/modelcontextprotocol/servers/discussions)
-- [Model Context Protocol Documentation](https://modelcontextprotocol.io)
-
----
-
-Part of the [Model Context Protocol](https://modelcontextprotocol.io) project.
