@@ -30,6 +30,13 @@ export class KnowledgeGraphManager {
   }
 
   /**
+   * Create a composite key for relation deduplication
+   */
+  private createRelationKey(relation: Relation): string {
+    return JSON.stringify([relation.from, relation.to, relation.relationType]);
+  }
+
+  /**
    * Ensure storage is initialized before any operation
    * This is called automatically by all public methods
    */
@@ -156,12 +163,12 @@ export class KnowledgeGraphManager {
     // Relations are globally unique by (from, to, relationType) across all threads
     // This enables multiple threads to collaboratively build the knowledge graph
     const existingRelationKeys = new Set(
-      graph.relations.map(r => JSON.stringify([r.from, r.to, r.relationType]))
+      graph.relations.map(r => this.createRelationKey(r))
     );
     // Create composite keys once per valid relation to avoid duplicate serialization
     const validRelationsWithKeys = validRelations.map(r => ({
       relation: r,
-      key: JSON.stringify([r.from, r.to, r.relationType])
+      key: this.createRelationKey(r)
     }));
     const newRelations = validRelationsWithKeys
       .filter(item => !existingRelationKeys.has(item.key))
