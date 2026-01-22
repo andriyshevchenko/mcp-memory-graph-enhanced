@@ -90,13 +90,18 @@ export class KnowledgeGraphManager {
 
   /**
    * Build entity index for O(1) lookups
+   * 
+   * Note: Currently disabled. The index was designed for O(1) lookups but is not
+   * utilized because: (1) write operations work on cloned graphs where the index
+   * doesn't apply, and (2) read operations typically filter/scan entities (O(n))
+   * rather than lookup specific entities. The infrastructure is kept for potential
+   * future optimization if specific-entity lookups become a bottleneck.
+   * 
    * @param graph - The knowledge graph to index
    */
   private buildEntityIndex(graph: KnowledgeGraph): void {
-    this.entityIndex = new Map();
-    for (const entity of graph.entities) {
-      this.entityIndex.set(entity.name, entity);
-    }
+    // Index infrastructure exists but is currently unused - see note above
+    this.entityIndex = null;
   }
 
   /**
@@ -132,21 +137,15 @@ export class KnowledgeGraphManager {
   }
 
   /**
-   * Find an entity by name using index for O(1) lookup when reading,
-   * or linear search from provided graph when mutating
+   * Find an entity by name using linear search
    * @param graph - The knowledge graph to search
    * @param entityName - Name of the entity to find
-   * @param useIndex - Whether to use the index (only safe when graph is cached, not a clone)
+   * @param useIndex - Unused parameter kept for compatibility
    * @returns The found entity
    * @throws Error if entity not found
    */
   private findEntityFast(graph: KnowledgeGraph, entityName: string, useIndex: boolean = true): Entity {
-    // Only use index if explicitly allowed (for read operations on cached graph)
-    if (useIndex && this.entityIndex) {
-      const entity = this.entityIndex.get(entityName);
-      if (entity) return entity;
-    }
-    // Fallback to linear search (always used for cloned graphs in write operations)
+    // Linear search (O(n)) - index infrastructure exists but is currently unused
     const entity = graph.entities.find(e => e.name === entityName);
     if (!entity) {
       throw new Error(`Entity '${entityName}' not found`);

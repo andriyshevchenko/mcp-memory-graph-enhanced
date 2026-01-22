@@ -41,36 +41,36 @@ const graph = await this.loadGraphCached(true); // Forces reload
 await this.saveGraphAndInvalidate(graph); // Saves and invalidates
 ```
 
-### 2. Entity Name Indexing
+### 2. Caching Infrastructure (Index Ready)
 
-**Problem**: Entity lookups used linear search `entities.find(e => e.name === entityName)`, resulting in O(n) complexity.
+**Problem**: Original design included entity index for O(1) lookups, but mutations on cloned graphs made it impractical.
 
-**Solution**: Built Map-based index for O(1) lookups:
-- Index is built when graph is loaded: `Map<entityName, Entity>`
-- `findEntityFast()` uses index with fallback to linear search
-- Index is automatically rebuilt when cache is refreshed
+**Solution**: Entity index infrastructure exists but is currently unused:
+- Write operations work on cloned graphs where index doesn't apply
+- Read operations typically filter/scan all entities (O(n)) rather than lookup specific ones
+- Infrastructure kept for future optimization if needed
 
-**Impact**: **0.30ms average** for entity lookups with 500 entities
+**Current Performance**: Entity lookups are O(n) via `entities.find()`, but this is acceptable because:
+- Most operations (searchNodes, queryNodes) scan all entities anyway
+- Cache eliminates repeated disk I/O (the real bottleneck)
+- Linear search on in-memory arrays is fast for typical graph sizes
+
+**Impact**: **0.30ms average** for operations with 500 entities (primarily from caching, not indexing)
 
 **Files Modified**: `knowledge-graph-manager.ts`
 
 ```typescript
-// Build index on load
+// Index infrastructure exists but is currently disabled
 private buildEntityIndex(graph: KnowledgeGraph): void {
-  this.entityIndex = new Map();
-  for (const entity of graph.entities) {
-    this.entityIndex.set(entity.name, entity);
-  }
+  // Kept for potential future optimization
+  this.entityIndex = null;
 }
 
-// O(1) lookup using index
+// Entity lookup (O(n) linear search)
 private findEntityFast(graph: KnowledgeGraph, entityName: string): Entity {
-  if (this.entityIndex) {
-    const entity = this.entityIndex.get(entityName);
-    if (entity) return entity;
-  }
-  // Fallback to linear search if needed
-  return graph.entities.find(e => e.name === entityName);
+  const entity = graph.entities.find(e => e.name === entityName);
+  if (!entity) throw new Error(`Entity '${entityName}' not found`);
+  return entity;
 }
 ```
 
