@@ -64,7 +64,7 @@ The server stores data in separate JSONL files per agent thread:
    - Quality score calculation
    - Clear, actionable error messages
 
-### Core Operations (Legacy)
+### Core Operations
 > ⚠️ **Note**: `create_entities` and `create_relations` are **deprecated**. New code should use `save_memory` for better reliability and validation.
 
 1. **create_entities**: Create new entities with metadata (including importance) - **[DEPRECATED - Use save_memory]**
