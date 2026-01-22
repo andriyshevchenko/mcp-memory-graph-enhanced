@@ -5,7 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.3.0] - Unreleased
+## [2.3.0] - 2026-01-22
+
+### Added
+- **update_observation tool** - New tool for updating observations while preserving version history:
+  - Creates new observation versions with incremented version numbers
+  - Maintains audit trail through `supersedes`/`superseded_by` chain
+  - Smart inheritance: confidence/importance inherited from old observation or entity if not provided
+  - Prevents updating already-superseded observations (enforces updating latest version)
+  - Automatic entity timestamp update on observation changes
+  - Full integration with `get_observation_history` for version tracking
+  - Comprehensive test coverage with 8 unit tests following AAA pattern
 
 ### Changed
 - **Increased observation character limit** - Raised max observation length from 150 to 300 characters:
@@ -13,6 +23,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Better supports real-world use cases requiring longer atomic facts
   - Updated tool descriptions and documentation to reflect new limit
   - All validation logic and tests updated accordingly
+- **Improved code modularity** - Refactored observation management with SOLID principles:
+  - Extracted reusable helper methods for entity/observation lookup
+  - Separated validation logic into focused methods
+  - Created test helper utilities to reduce code duplication
+  - Enhanced maintainability and testability of codebase
 
 ## [2.2.1] - 2026-01-21
 
