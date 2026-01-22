@@ -19,12 +19,12 @@ export class KnowledgeGraphManager {
 
   /**
    * Check if content contains any negation words (using word boundary matching)
-   * Handles punctuation and avoids creating intermediate Set for performance
+   * Handles punctuation and contractions, avoids creating intermediate Set for performance
    */
   private hasNegation(content: string): boolean {
-    // Extract words using word boundary regex, removing punctuation
+    // Extract words using word boundary regex, preserving contractions (include apostrophes)
     const lowerContent = content.toLowerCase();
-    const wordMatches = lowerContent.match(/\b\w+\b/g);
+    const wordMatches = lowerContent.match(/\b[\w']+\b/g);
     
     if (!wordMatches) {
       return false;
@@ -40,10 +40,18 @@ export class KnowledgeGraphManager {
   }
 
   /**
-   * Create a composite key for relation deduplication
+   * Create a composite key for relation deduplication.
+   * 
+   * We explicitly normalize the components to primitive strings to ensure
+   * stable serialization and to document the assumption that `from`, `to`,
+   * and `relationType` are simple string identifiers.
    */
   private createRelationKey(relation: Relation): string {
-    return JSON.stringify([relation.from, relation.to, relation.relationType]);
+    const from = String(relation.from);
+    const to = String(relation.to);
+    const relationType = String(relation.relationType);
+    
+    return JSON.stringify([from, to, relationType]);
   }
 
   /**
