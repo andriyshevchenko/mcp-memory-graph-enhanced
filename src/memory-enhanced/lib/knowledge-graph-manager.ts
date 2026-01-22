@@ -31,7 +31,7 @@ export class KnowledgeGraphManager {
     const previousLock = this.operationLock;
     
     // Create a new lock for this operation
-    let releaseLock: () => void;
+    let releaseLock: (() => void) | undefined;
     this.operationLock = new Promise<void>((resolve) => {
       releaseLock = resolve;
     });
@@ -42,8 +42,10 @@ export class KnowledgeGraphManager {
       // Execute this operation
       return await operation();
     } finally {
-      // Release the lock
-      releaseLock!();
+      // Release the lock (safe because Promise executor runs synchronously)
+      if (releaseLock) {
+        releaseLock();
+      }
     }
   }
 
@@ -832,7 +834,8 @@ export class KnowledgeGraphManager {
       }
       
       if (options.importanceLessThan !== undefined) {
-        entitiesToKeep = entitiesToKeep.filter(e => e.importance >= options.importanceLessThan!);
+        const minImportance = options.importanceLessThan;
+        entitiesToKeep = entitiesToKeep.filter(e => e.importance >= minImportance);
       }
       
       // Ensure we keep minimum entities
