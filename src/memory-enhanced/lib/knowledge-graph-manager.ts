@@ -121,7 +121,11 @@ export class KnowledgeGraphManager {
     const graph = await this.storage.loadGraph();
     // Entity names are globally unique across all threads in the collaborative knowledge graph
     // This prevents duplicate entities while allowing multiple threads to contribute to the same entity
-    const newEntities = entities.filter(e => !graph.entities.some(existingEntity => existingEntity.name === e.name));
+    
+    // Performance optimization: Use Map for O(1) lookup instead of O(n) .some()
+    const existingEntityNames = new Map(graph.entities.map(e => [e.name, true]));
+    const newEntities = entities.filter(e => !existingEntityNames.has(e.name));
+    
     graph.entities.push(...newEntities);
     await this.storage.saveGraph(graph);
     return newEntities;
@@ -142,11 +146,15 @@ export class KnowledgeGraphManager {
     
     // Relations are globally unique by (from, to, relationType) across all threads
     // This enables multiple threads to collaboratively build the knowledge graph
-    const newRelations = validRelations.filter(r => !graph.relations.some(existingRelation => 
-      existingRelation.from === r.from && 
-      existingRelation.to === r.to && 
-      existingRelation.relationType === r.relationType
-    ));
+    
+    // Performance optimization: Use Set for O(1) lookup instead of O(n) .some()
+    const existingRelationKeys = new Set(
+      graph.relations.map(r => `${r.from}|${r.to}|${r.relationType}`)
+    );
+    const newRelations = validRelations.filter(r => 
+      !existingRelationKeys.has(`${r.from}|${r.to}|${r.relationType}`)
+    );
+    
     graph.relations.push(...newRelations);
     await this.storage.saveGraph(graph);
     return newRelations;
@@ -154,8 +162,12 @@ export class KnowledgeGraphManager {
 
   async addObservations(observations: { entityName: string; contents: string[]; agentThreadId: string; timestamp: string; confidence: number; importance: number }[]): Promise<{ entityName: string; addedObservations: Observation[] }[]> {
     const graph = await this.storage.loadGraph();
+    
+    // Performance optimization: Pre-build entity map for O(1) lookup instead of O(n) .find() in loop
+    const entityMap = new Map(graph.entities.map(e => [e.name, e]));
+    
     const results = observations.map(o => {
-      const entity = graph.entities.find(e => e.name === o.entityName);
+      const entity = entityMap.get(o.entityName);
       if (!entity) {
         throw new Error(`Entity with name ${o.entityName} not found`);
       }
@@ -202,8 +214,14 @@ export class KnowledgeGraphManager {
 
   async deleteEntities(entityNames: string[]): Promise<void> {
     const graph = await this.storage.loadGraph();
-    graph.entities = graph.entities.filter(e => !entityNames.includes(e.name));
-    graph.relations = graph.relations.filter(r => !entityNames.includes(r.from) && !entityNames.includes(r.to));
+    
+    // Performance optimization: Use Set for O(1) lookup instead of O(n) .includes()
+    const entityNamesToDelete = new Set(entityNames);
+    graph.entities = graph.entities.filter(e => !entityNamesToDelete.has(e.name));
+    graph.relations = graph.relations.filter(r => 
+      !entityNamesToDelete.has(r.from) && !entityNamesToDelete.has(r.to)
+    );
+    
     await this.storage.saveGraph(graph);
   }
 
@@ -501,11 +519,10 @@ export class KnowledgeGraphManager {
       ? graph.entities.reduce((sum, e) => sum + e.importance, 0) / graph.entities.length
       : 0;
     
-    // Count unique threads
-    const threads = new Set([
-      ...graph.entities.map(e => e.agentThreadId),
-      ...graph.relations.map(r => r.agentThreadId)
-    ]);
+    // Performance optimization: Count unique threads using a single loop instead of creating intermediate arrays
+    const threads = new Set<string>();
+    graph.entities.forEach(e => threads.add(e.agentThreadId));
+    graph.relations.forEach(r => threads.add(r.agentThreadId));
     
     // Recent activity (last 7 days, grouped by day)
     const now = new Date();
@@ -563,6 +580,24 @@ export class KnowledgeGraphManager {
       return { found: true, path: [from], relations: [] };
     }
     
+    // Performance optimization: Build adjacency map once for O(1) lookups instead of O(n) filtering in loop
+    const outgoingMap = new Map<string, Relation[]>();
+    const incomingMap = new Map<string, Relation[]>();
+    
+    for (const rel of graph.relations) {
+      // Build outgoing map
+      if (!outgoingMap.has(rel.from)) {
+        outgoingMap.set(rel.from, []);
+      }
+      outgoingMap.get(rel.from)!.push(rel);
+      
+      // Build incoming map
+      if (!incomingMap.has(rel.to)) {
+        incomingMap.set(rel.to, []);
+      }
+      incomingMap.get(rel.to)!.push(rel);
+    }
+    
     // BFS to find shortest path
     const queue: { entity: string; path: string[]; relations: Relation[] }[] = [
       { entity: from, path: [from], relations: [] }
@@ -577,8 +612,8 @@ export class KnowledgeGraphManager {
       }
       
       // Find all relations connected to current entity (both outgoing and incoming for bidirectional search)
-      const outgoing = graph.relations.filter(r => r.from === current.entity);
-      const incoming = graph.relations.filter(r => r.to === current.entity);
+      const outgoing = outgoingMap.get(current.entity) || [];
+      const incoming = incomingMap.get(current.entity) || [];
       
       // Check outgoing relations
       for (const rel of outgoing) {
@@ -635,33 +670,41 @@ export class KnowledgeGraphManager {
     for (const entity of graph.entities) {
       const entityConflicts: { obs1: string; obs2: string; reason: string }[] = [];
       
-      for (let i = 0; i < entity.observations.length; i++) {
-        for (let j = i + 1; j < entity.observations.length; j++) {
-          const obs1Content = entity.observations[i].content.toLowerCase();
-          const obs2Content = entity.observations[j].content.toLowerCase();
+      // Performance optimization: Pre-cache lowercase content and split words for each observation
+      const obsCache = entity.observations.map(obs => {
+        const lowerContent = obs.content.toLowerCase();
+        const words = lowerContent.split(/\s+/).filter(w => w.length > 3);
+        const hasNegation = Array.from(KnowledgeGraphManager.NEGATION_WORDS).some(word => lowerContent.includes(word));
+        return {
+          obs,
+          lowerContent,
+          words,
+          wordsSet: new Set(words),
+          hasNegation
+        };
+      });
+      
+      for (let i = 0; i < obsCache.length; i++) {
+        for (let j = i + 1; j < obsCache.length; j++) {
+          const obs1 = obsCache[i];
+          const obs2 = obsCache[j];
           
           // Skip if observations are in the same version chain
-          if (entity.observations[i].supersedes === entity.observations[j].id || 
-              entity.observations[j].supersedes === entity.observations[i].id ||
-              entity.observations[i].superseded_by === entity.observations[j].id ||
-              entity.observations[j].superseded_by === entity.observations[i].id) {
+          if (obs1.obs.supersedes === obs2.obs.id || 
+              obs2.obs.supersedes === obs1.obs.id ||
+              obs1.obs.superseded_by === obs2.obs.id ||
+              obs2.obs.superseded_by === obs1.obs.id) {
             continue;
           }
           
-          // Check for negation patterns
-          const obs1HasNegation = Array.from(KnowledgeGraphManager.NEGATION_WORDS).some(word => obs1Content.includes(word));
-          const obs2HasNegation = Array.from(KnowledgeGraphManager.NEGATION_WORDS).some(word => obs2Content.includes(word));
-          
           // If one has negation and they share key words, might be a conflict
-          if (obs1HasNegation !== obs2HasNegation) {
-            const words1 = obs1Content.split(/\s+/).filter(w => w.length > 3);
-            const words2Set = new Set(obs2Content.split(/\s+/).filter(w => w.length > 3));
-            const commonWords = words1.filter(w => words2Set.has(w) && !KnowledgeGraphManager.NEGATION_WORDS.has(w));
+          if (obs1.hasNegation !== obs2.hasNegation) {
+            const commonWords = obs1.words.filter(w => obs2.wordsSet.has(w) && !KnowledgeGraphManager.NEGATION_WORDS.has(w));
             
             if (commonWords.length >= 2) {
               entityConflicts.push({
-                obs1: entity.observations[i].content,
-                obs2: entity.observations[j].content,
+                obs1: obs1.obs.content,
+                obs2: obs2.obs.content,
                 reason: 'Potential contradiction with negation'
               });
             }
