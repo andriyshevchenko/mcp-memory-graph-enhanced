@@ -7,10 +7,6 @@ import { Entity, Relation, KnowledgeGraph, Observation } from './types.js';
 import { IStorageAdapter } from './storage-interface.js';
 import { JsonlStorageAdapter } from './jsonl-storage-adapter.js';
 
-// Import utility functions
-import { hasNegation } from './utils/negation-detector.js';
-import { createRelationKey } from './utils/relation-key.js';
-
 // Import CRUD operations
 import * as EntityOps from './operations/entity-operations.js';
 import * as RelationOps from './operations/relation-operations.js';

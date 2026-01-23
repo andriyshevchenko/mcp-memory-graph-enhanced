@@ -2,7 +2,7 @@
  * Observation CRUD operations
  */
 
-import { Observation, Entity } from '../types.js';
+import { Observation } from '../types.js';
 import { IStorageAdapter } from '../storage-interface.js';
 import { randomUUID } from 'crypto';
 import { findEntity, findObservation } from '../utils/entity-finder.js';

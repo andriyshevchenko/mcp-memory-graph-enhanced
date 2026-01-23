@@ -25,6 +25,10 @@ export function calculateQualityScore(entities: SaveMemoryEntity[]): number {
   
   // Average observation length (shorter is better for atomicity)
   const totalObs = entities.reduce((sum, e) => sum + e.observations.length, 0);
+  if (totalObs === 0) {
+    // No observations available; base score solely on relations to avoid division by zero
+    return relationScore * RELATION_SCORE_WEIGHT;
+  }
   const avgObsLength = entities.reduce((sum, e) => 
     sum + e.observations.reduce((s, o) => s + o.length, 0), 0
   ) / totalObs;

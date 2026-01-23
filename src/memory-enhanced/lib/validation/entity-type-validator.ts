@@ -19,11 +19,16 @@ export function normalizeEntityType(entityType: string): { normalized: string; w
   if (/\s/.test(entityType)) {
     // Replace multiple spaces with single space and trim
     const condensed = entityType.replace(/\s+/g, ' ').trim();
-    const suggested = condensed
-      .split(' ')
-      .map(word => word[0].toUpperCase() + word.slice(1))
-      .join('');
-    warnings.push(`EntityType '${entityType}' contains spaces. Consider using '${suggested}' instead.`);
+    if (condensed.length > 0) {
+      const suggested = condensed
+        .split(' ')
+        .map(word => word[0].toUpperCase() + word.slice(1))
+        .join('');
+      warnings.push(`EntityType '${entityType}' contains spaces. Consider using '${suggested}' instead.`);
+    } else {
+      // Handle the edge case where the entity type is only whitespace
+      warnings.push(`EntityType '${entityType}' contains only whitespace and will be treated as empty.`);
+    }
   }
   
   return { normalized, warnings };

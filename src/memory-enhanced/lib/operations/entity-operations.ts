@@ -2,7 +2,7 @@
  * Entity CRUD operations
  */
 
-import { Entity, KnowledgeGraph } from '../types.js';
+import { Entity } from '../types.js';
 import { IStorageAdapter } from '../storage-interface.js';
 
 /**

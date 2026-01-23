@@ -32,16 +32,23 @@ export async function pruneMemory(
   }
   
   // Ensure we keep minimum entities
-  // If keepMinEntities is set and we need more entities, take from the already-filtered set
+  // If keepMinEntities is set and we need more entities, backfill from the original graph
   // sorted by importance and recency
   if (options.keepMinEntities && entitiesToKeep.length < options.keepMinEntities) {
-    // Sort the filtered entities by importance and timestamp, keep the most important and recent
-    const sorted = [...entitiesToKeep].sort((a, b) => {
-      if (a.importance !== b.importance) return b.importance - a.importance;
-      return b.timestamp.localeCompare(a.timestamp);
-    });
-    // If we still don't have enough, we keep what we have
-    entitiesToKeep = sorted.slice(0, Math.min(options.keepMinEntities, sorted.length));
+    const minToKeep = options.keepMinEntities;
+    const alreadyKeptNames = new Set(entitiesToKeep.map(e => e.name));
+
+    // Candidates are entities from the original graph that are not already kept
+    const candidates = graph.entities
+      .filter(e => !alreadyKeptNames.has(e.name))
+      .sort((a, b) => {
+        if (a.importance !== b.importance) return b.importance - a.importance;
+        return b.timestamp.localeCompare(a.timestamp);
+      });
+
+    const needed = minToKeep - entitiesToKeep.length;
+    const backfill = candidates.slice(0, Math.max(0, needed));
+    entitiesToKeep = [...entitiesToKeep, ...backfill];
   }
   
   const keptEntityNames = new Set(entitiesToKeep.map(e => e.name));

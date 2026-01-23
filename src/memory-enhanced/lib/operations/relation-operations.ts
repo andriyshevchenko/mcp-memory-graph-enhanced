@@ -2,7 +2,7 @@
  * Relation CRUD operations
  */
 
-import { Relation, KnowledgeGraph } from '../types.js';
+import { Relation } from '../types.js';
 import { IStorageAdapter } from '../storage-interface.js';
 import { createRelationKey } from '../utils/relation-key.js';
 
