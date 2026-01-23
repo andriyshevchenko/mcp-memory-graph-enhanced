@@ -4,6 +4,7 @@
 
 import { Observation } from '../types.js';
 import { IStorageAdapter } from '../storage-interface.js';
+import { findEntity, findObservation } from '../utils/entity-finder.js';
 
 /**
  * Get full history chain for an observation
@@ -17,16 +18,10 @@ export async function getObservationHistory(
   const graph = await storage.loadGraph();
   
   // Find the entity
-  const entity = graph.entities.find(e => e.name === entityName);
-  if (!entity) {
-    throw new Error(`Entity '${entityName}' not found`);
-  }
+  const entity = findEntity(graph, entityName);
   
   // Find the starting observation
-  const startObs = entity.observations.find(o => o.id === observationId);
-  if (!startObs) {
-    throw new Error(`Observation '${observationId}' not found in entity '${entityName}'`);
-  }
+  const startObs = findObservation(entity, observationId);
   
   // Build the version chain
   const history: Observation[] = [];

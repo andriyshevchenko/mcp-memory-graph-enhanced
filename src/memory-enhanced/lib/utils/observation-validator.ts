@@ -19,11 +19,11 @@ export function validateObservationNotSuperseded(observation: Observation): void
 }
 
 /**
- * Resolve confidence value using inheritance chain: params > observation > entity.
+ * Resolve a numeric value using an inheritance chain: params > observation > entity.
  * @param providedValue - Value provided in parameters (optional)
  * @param observationValue - Value from observation (optional)
  * @param entityValue - Value from entity (fallback)
- * @returns Resolved confidence value
+ * @returns Resolved value
  */
 export function resolveInheritedValue(
   providedValue: number | undefined,
