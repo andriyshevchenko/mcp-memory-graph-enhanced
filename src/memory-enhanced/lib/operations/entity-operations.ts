@@ -43,8 +43,8 @@ export async function deleteEntities(
       .filter(e => namesToDelete.has(e.name) && e.agentThreadId === threadId)
       .map(e => e.name)
   );
-  // Only delete entities that belong to the specified thread
-  graph.entities = graph.entities.filter(e => !(deletedEntityNames.has(e.name) && e.agentThreadId === threadId));
+  // Delete entities that were identified for deletion
+  graph.entities = graph.entities.filter(e => !deletedEntityNames.has(e.name));
   // Only delete relations that belong to the specified thread and reference actually deleted entities
   graph.relations = graph.relations.filter(
     r => !(r.agentThreadId === threadId && (deletedEntityNames.has(r.from) || deletedEntityNames.has(r.to)))

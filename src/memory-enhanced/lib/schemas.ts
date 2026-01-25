@@ -272,7 +272,7 @@ export const AddObservationsInputSchema = z.object({
   observations: z.array(z.object({
     entityName: z.string().describe("The name of the entity to add the observations to"),
     contents: z.array(z.string()).describe("An array of observation contents to add"),
-    agentThreadId: z.string().describe("The agent thread ID adding these observations (must match the top-level threadId)"),
+    agentThreadId: z.string().describe("The agent thread ID adding these observations"),
     timestamp: z.string().describe("ISO 8601 timestamp of when the observations are added"),
     confidence: z.number().min(0).max(1).describe("Confidence coefficient from 0 to 1"),
     importance: z.number().min(0).max(1).describe("Importance for memory integrity if lost: 0 (not important) to 1 (critical)")
