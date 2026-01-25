@@ -236,12 +236,34 @@ export const GetContextInputSchema = z.object({
 export const CreateEntitiesInputSchema = z.object({
   threadId: z.string().min(1).describe("Thread ID for this conversation/project"),
   entities: z.array(EntitySchema).describe("Array of entities to create")
+}).superRefine((data, ctx) => {
+  const { threadId, entities } = data;
+  entities.forEach((entity, index) => {
+    if (entity.agentThreadId !== threadId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Entity agentThreadId must match the top-level threadId",
+        path: ["entities", index, "agentThreadId"]
+      });
+    }
+  });
 });
 
 // Schema for create_relations tool
 export const CreateRelationsInputSchema = z.object({
   threadId: z.string().min(1).describe("Thread ID for this conversation/project"),
   relations: z.array(RelationSchema).describe("Array of relations to create")
+}).superRefine((data, ctx) => {
+  const { threadId, relations } = data;
+  relations.forEach((relation, index) => {
+    if (relation.agentThreadId !== threadId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Relation agentThreadId must match the top-level threadId",
+        path: ["relations", index, "agentThreadId"]
+      });
+    }
+  });
 });
 
 // Schema for add_observations tool
@@ -250,11 +272,21 @@ export const AddObservationsInputSchema = z.object({
   observations: z.array(z.object({
     entityName: z.string().describe("The name of the entity to add the observations to"),
     contents: z.array(z.string()).describe("An array of observation contents to add"),
-    agentThreadId: z.string().describe("The agent thread ID adding these observations"),
+    agentThreadId: z.string().describe("The agent thread ID adding these observations (must match the top-level threadId)"),
     timestamp: z.string().describe("ISO 8601 timestamp of when the observations are added"),
     confidence: z.number().min(0).max(1).describe("Confidence coefficient from 0 to 1"),
     importance: z.number().min(0).max(1).describe("Importance for memory integrity if lost: 0 (not important) to 1 (critical)")
   })).describe("Array of observations to add")
+}).superRefine((data, ctx) => {
+  data.observations.forEach((observation, index) => {
+    if (observation.agentThreadId !== data.threadId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "agentThreadId must match the top-level threadId",
+        path: ["observations", index, "agentThreadId"],
+      });
+    }
+  });
 });
 
 // Schema for delete_entities tool

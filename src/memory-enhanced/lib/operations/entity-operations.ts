@@ -37,9 +37,17 @@ export async function deleteEntities(
 ): Promise<void> {
   const graph = await storage.loadGraph();
   const namesToDelete = new Set(entityNames);
+  // Determine which entities will actually be deleted for this thread
+  const deletedEntityNames = new Set(
+    graph.entities
+      .filter(e => namesToDelete.has(e.name) && e.agentThreadId === threadId)
+      .map(e => e.name)
+  );
   // Only delete entities that belong to the specified thread
-  graph.entities = graph.entities.filter(e => !(namesToDelete.has(e.name) && e.agentThreadId === threadId));
-  // Only delete relations that belong to the specified thread and reference deleted entities
-  graph.relations = graph.relations.filter(r => !(r.agentThreadId === threadId && (namesToDelete.has(r.from) || namesToDelete.has(r.to))));
+  graph.entities = graph.entities.filter(e => !(deletedEntityNames.has(e.name) && e.agentThreadId === threadId));
+  // Only delete relations that belong to the specified thread and reference actually deleted entities
+  graph.relations = graph.relations.filter(
+    r => !(r.agentThreadId === threadId && (deletedEntityNames.has(r.from) || deletedEntityNames.has(r.to)))
+  );
   await storage.saveGraph(graph);
 }
