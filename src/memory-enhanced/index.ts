@@ -34,7 +34,16 @@ import {
   FindRelationPathInputSchema,
   DetectConflictsInputSchema,
   GetFlaggedEntitiesInputSchema,
-  GetContextInputSchema
+  GetContextInputSchema,
+  CreateEntitiesInputSchema,
+  CreateRelationsInputSchema,
+  AddObservationsInputSchema,
+  DeleteEntitiesInputSchema,
+  DeleteObservationsInputSchema,
+  DeleteRelationsInputSchema,
+  PruneMemoryInputSchema,
+  BulkUpdateInputSchema,
+  FlagForReviewInputSchema
 } from './lib/schemas.js';
 import { handleSaveMemory } from './lib/save-memory-handler.js';
 import { validateSaveMemoryRequest } from './lib/validation.js';
@@ -237,15 +246,14 @@ server.registerTool(
   {
     title: "Create Entities",
     description: "Create multiple new entities in the knowledge graph with metadata (agent thread ID, timestamp, confidence, importance)",
-    inputSchema: {
-      entities: z.array(EntitySchemaCompat)
-    },
+    inputSchema: CreateEntitiesInputSchema,
     outputSchema: {
       entities: z.array(EntitySchemaCompat)
     }
   },
-  async ({ entities }) => {
-    const result = await knowledgeGraphManager.createEntities(entities);
+  async (input: any) => {
+    const { threadId, entities } = input;
+    const result = await knowledgeGraphManager.createEntities(threadId, entities);
     return {
       content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
       structuredContent: { entities: result }
@@ -259,15 +267,14 @@ server.registerTool(
   {
     title: "Create Relations",
     description: "Create multiple new relations between entities in the knowledge graph with metadata (agent thread ID, timestamp, confidence, importance). Relations should be in active voice",
-    inputSchema: {
-      relations: z.array(RelationSchemaCompat)
-    },
+    inputSchema: CreateRelationsInputSchema,
     outputSchema: {
       relations: z.array(RelationSchemaCompat)
     }
   },
-  async ({ relations }) => {
-    const result = await knowledgeGraphManager.createRelations(relations);
+  async (input: any) => {
+    const { threadId, relations } = input;
+    const result = await knowledgeGraphManager.createRelations(threadId, relations);
     return {
       content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
       structuredContent: { relations: result }
@@ -281,16 +288,7 @@ server.registerTool(
   {
     title: "Add Observations",
     description: "Add new observations to existing entities in the knowledge graph with metadata (agent thread ID, timestamp, confidence, importance)",
-    inputSchema: {
-      observations: z.array(z.object({
-        entityName: z.string().describe("The name of the entity to add the observations to"),
-        contents: z.array(z.string()).describe("An array of observation contents to add"),
-        agentThreadId: z.string().describe("The agent thread ID adding these observations"),
-        timestamp: z.string().describe("ISO 8601 timestamp of when the observations are added"),
-        confidence: z.number().min(0).max(1).describe("Confidence coefficient from 0 to 1"),
-        importance: z.number().min(0).max(1).describe("Importance for memory integrity if lost: 0 (not important) to 1 (critical)")
-      }))
-    },
+    inputSchema: AddObservationsInputSchema,
     outputSchema: {
       results: z.array(z.object({
         entityName: z.string(),
@@ -298,8 +296,9 @@ server.registerTool(
       }))
     }
   },
-  async ({ observations }) => {
-    const result = await knowledgeGraphManager.addObservations(observations);
+  async (input: any) => {
+    const { threadId, observations } = input;
+    const result = await knowledgeGraphManager.addObservations(threadId, observations);
     return {
       content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
       structuredContent: { results: result }
@@ -313,16 +312,15 @@ server.registerTool(
   {
     title: "Delete Entities",
     description: "Delete multiple entities and their associated relations from the knowledge graph",
-    inputSchema: {
-      entityNames: z.array(z.string()).describe("An array of entity names to delete")
-    },
+    inputSchema: DeleteEntitiesInputSchema,
     outputSchema: {
       success: z.boolean(),
       message: z.string()
     }
   },
-  async ({ entityNames }) => {
-    await knowledgeGraphManager.deleteEntities(entityNames);
+  async (input: any) => {
+    const { threadId, entityNames } = input;
+    await knowledgeGraphManager.deleteEntities(threadId, entityNames);
     return {
       content: [{ type: "text" as const, text: "Entities deleted successfully" }],
       structuredContent: { success: true, message: "Entities deleted successfully" }
@@ -336,19 +334,15 @@ server.registerTool(
   {
     title: "Delete Observations",
     description: "Delete specific observations from entities in the knowledge graph",
-    inputSchema: {
-      deletions: z.array(z.object({
-        entityName: z.string().describe("The name of the entity containing the observations"),
-        observations: z.array(z.string()).describe("An array of observations to delete")
-      }))
-    },
+    inputSchema: DeleteObservationsInputSchema,
     outputSchema: {
       success: z.boolean(),
       message: z.string()
     }
   },
-  async ({ deletions }) => {
-    await knowledgeGraphManager.deleteObservations(deletions);
+  async (input: any) => {
+    const { threadId, deletions } = input;
+    await knowledgeGraphManager.deleteObservations(threadId, deletions);
     return {
       content: [{ type: "text" as const, text: "Observations deleted successfully" }],
       structuredContent: { success: true, message: "Observations deleted successfully" }
@@ -393,16 +387,15 @@ server.registerTool(
   {
     title: "Delete Relations",
     description: "Delete multiple relations from the knowledge graph",
-    inputSchema: {
-      relations: z.array(RelationSchemaCompat).describe("An array of relations to delete")
-    },
+    inputSchema: DeleteRelationsInputSchema,
     outputSchema: {
       success: z.boolean(),
       message: z.string()
     }
   },
-  async ({ relations }) => {
-    await knowledgeGraphManager.deleteRelations(relations);
+  async (input: any) => {
+    const { threadId, relations } = input;
+    await knowledgeGraphManager.deleteRelations(threadId, relations);
     return {
       content: [{ type: "text" as const, text: "Relations deleted successfully" }],
       structuredContent: { success: true, message: "Relations deleted successfully" }
@@ -762,18 +755,15 @@ server.registerTool(
   {
     title: "Prune Memory",
     description: "Remove old or low-importance entities to manage memory size, with option to keep minimum number of entities",
-    inputSchema: {
-      olderThan: z.string().optional().describe("ISO 8601 timestamp - remove entities older than this"),
-      importanceLessThan: z.number().min(0).max(1).optional().describe("Remove entities with importance less than this value"),
-      keepMinEntities: z.number().optional().describe("Minimum number of entities to keep regardless of filters")
-    },
+    inputSchema: PruneMemoryInputSchema,
     outputSchema: {
       removedEntities: z.number(),
       removedRelations: z.number()
     }
   },
-  async (options) => {
-    const result = await knowledgeGraphManager.pruneMemory(options);
+  async (input: any) => {
+    const { threadId, ...options } = input;
+    const result = await knowledgeGraphManager.pruneMemory(threadId, options);
     return {
       content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
       structuredContent: result
@@ -787,21 +777,15 @@ server.registerTool(
   {
     title: "Bulk Update",
     description: "Efficiently update multiple entities at once with new confidence, importance, or observations",
-    inputSchema: {
-      updates: z.array(z.object({
-        entityName: z.string(),
-        confidence: z.number().min(0).max(1).optional(),
-        importance: z.number().min(0).max(1).optional(),
-        addObservations: z.array(z.string()).optional()
-      }))
-    },
+    inputSchema: BulkUpdateInputSchema,
     outputSchema: {
       updated: z.number(),
       notFound: z.array(z.string())
     }
   },
-  async ({ updates }) => {
-    const result = await knowledgeGraphManager.bulkUpdate(updates);
+  async (input: any) => {
+    const { threadId, updates } = input;
+    const result = await knowledgeGraphManager.bulkUpdate(threadId, updates);
     return {
       content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
       structuredContent: result
@@ -815,18 +799,15 @@ server.registerTool(
   {
     title: "Flag Entity for Review",
     description: "Mark an entity for human review with a specific reason (Human-in-the-Loop)",
-    inputSchema: {
-      entityName: z.string().describe("Name of entity to flag"),
-      reason: z.string().describe("Reason for flagging"),
-      reviewer: z.string().optional().describe("Optional reviewer name")
-    },
+    inputSchema: FlagForReviewInputSchema,
     outputSchema: {
       success: z.boolean(),
       message: z.string()
     }
   },
-  async ({ entityName, reason, reviewer }) => {
-    await knowledgeGraphManager.flagForReview(entityName, reason, reviewer);
+  async (input: any) => {
+    const { threadId, entityName, reason, reviewer } = input;
+    await knowledgeGraphManager.flagForReview(threadId, entityName, reason, reviewer);
     return {
       content: [{ type: "text" as const, text: `Entity "${entityName}" flagged for review` }],
       structuredContent: { success: true, message: `Entity "${entityName}" flagged for review` }

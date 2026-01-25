@@ -8,18 +8,20 @@ import { randomUUID } from 'crypto';
 
 /**
  * Flag an entity for review
+ * Thread isolation: Only flags entities in the specified thread
  */
 export async function flagForReview(
   storage: IStorageAdapter,
+  threadId: string,
   entityName: string,
   reason: string,
   reviewer?: string
 ): Promise<void> {
   const graph = await storage.loadGraph();
-  const entity = graph.entities.find(e => e.name === entityName);
+  const entity = graph.entities.find(e => e.name === entityName && e.agentThreadId === threadId);
   
   if (!entity) {
-    throw new Error(`Entity with name ${entityName} not found`);
+    throw new Error(`Entity with name ${entityName} not found in thread ${threadId}`);
   }
   
   // Add a special observation to mark for review

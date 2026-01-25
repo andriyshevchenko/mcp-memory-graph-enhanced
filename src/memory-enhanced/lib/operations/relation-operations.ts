@@ -10,9 +10,11 @@ import { createRelationKey } from '../utils/relation-key.js';
  * Create new relations in the knowledge graph
  * Relations are globally unique by (from, to, relationType) across all threads
  * This enables multiple threads to collaboratively build the knowledge graph
+ * Thread isolation: Only creates relations that belong to the specified thread
  */
 export async function createRelations(
   storage: IStorageAdapter,
+  threadId: string,
   relations: Relation[]
 ): Promise<Relation[]> {
   const graph = await storage.loadGraph();
@@ -22,6 +24,11 @@ export async function createRelations(
   const validRelations = relations.filter(r => {
     if (!entityNames.has(r.from) || !entityNames.has(r.to)) {
       console.warn(`Skipping relation ${r.from} -> ${r.to}: one or both entities do not exist`);
+      return false;
+    }
+    // Ensure relation belongs to the specified thread
+    if (r.agentThreadId !== threadId) {
+      console.warn(`Skipping relation ${r.from} -> ${r.to}: does not belong to thread ${threadId}`);
       return false;
     }
     return true;
@@ -45,18 +52,20 @@ export async function createRelations(
 
 /**
  * Delete relations from the knowledge graph
- * Deletions affect all threads in the collaborative knowledge graph
+ * Thread isolation: Only deletes relations that belong to the specified thread
  */
 export async function deleteRelations(
   storage: IStorageAdapter,
+  threadId: string,
   relations: Relation[]
 ): Promise<void> {
   const graph = await storage.loadGraph();
-  // Delete relations globally across all threads by matching (from, to, relationType)
+  // Delete relations only from the specified thread by matching (from, to, relationType, threadId)
   graph.relations = graph.relations.filter(r => !relations.some(delRelation => 
     r.from === delRelation.from && 
     r.to === delRelation.to && 
-    r.relationType === delRelation.relationType
+    r.relationType === delRelation.relationType &&
+    r.agentThreadId === threadId
   ));
   await storage.saveGraph(graph);
 }

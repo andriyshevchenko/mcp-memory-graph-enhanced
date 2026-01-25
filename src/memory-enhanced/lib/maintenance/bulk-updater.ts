@@ -8,9 +8,11 @@ import { randomUUID } from 'crypto';
 
 /**
  * Perform bulk updates on multiple entities
+ * Thread isolation: Only updates entities in the specified thread
  */
 export async function bulkUpdate(
   storage: IStorageAdapter,
+  threadId: string,
   updates: {
     entityName: string;
     confidence?: number;
@@ -23,7 +25,7 @@ export async function bulkUpdate(
   const notFound: string[] = [];
   
   for (const update of updates) {
-    const entity = graph.entities.find(e => e.name === update.entityName);
+    const entity = graph.entities.find(e => e.name === update.entityName && e.agentThreadId === threadId);
     if (!entity) {
       notFound.push(update.entityName);
       continue;
