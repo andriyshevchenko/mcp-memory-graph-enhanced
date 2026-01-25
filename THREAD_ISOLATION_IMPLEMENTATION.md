@@ -51,8 +51,8 @@ Updated existing schemas:
 ### 3. Knowledge Graph Manager (`lib/knowledge-graph-manager.ts`)
 Updated all read methods to accept and pass threadId:
 - `readGraph(threadId)`
-- `searchNodes(query, threadId)`
-- `openNodes(names, threadId)`
+- `searchNodes(threadId, query)`
+- `openNodes(threadId, names)`
 - `queryNodes(threadId, filters?)`
 - `listEntities(threadId, entityType?, namePattern?)`
 - `getMemoryStats(threadId)`
@@ -102,6 +102,12 @@ Affected tools:
 
 ### What is NOT Isolated (By Design)
 1. **`list_conversations`**: Lists all threads (this is the only way to discover available threads)
+2. **`threadCount` metric**: In `get_memory_stats`, the `threadCount` field returns the total number of threads in the system (not just 1 for the current thread). This provides useful context about system usage without exposing thread-specific data.
+
+### Entity Name Behavior
+- **Entity names CAN be duplicated across threads**: Different threads can create entities with the same name
+- **Cross-thread references are blocked**: When creating relations in `save_memory`, validation only allows references to entities within the same thread
+- **No global uniqueness constraint**: Entity names are scoped to their thread context
 
 ## Testing
 

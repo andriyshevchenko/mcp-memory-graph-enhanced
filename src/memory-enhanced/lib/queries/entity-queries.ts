@@ -5,22 +5,20 @@
 import { IStorageAdapter } from '../storage-interface.js';
 
 /**
- * Get names of all entities that can be referenced in relations.
- * @returns Set of entity names that exist in the graph.
+ * Get names of all entities across all threads.
  * 
- * Note: Returns ALL entities globally because entity names are globally unique across
- * all threads in the collaborative knowledge graph (by design - see createEntities).
- * This enables any thread to reference any existing entity, supporting incremental
- * building and cross-thread collaboration. Thread-specific filtering is not needed
- * since entity names cannot conflict across threads.
+ * Note: This function is used for administrative purposes and returns entity names
+ * from all threads. Entity names are NOT globally unique - different threads can
+ * have entities with the same name. This function is primarily used by the manager's
+ * getAllEntityNames() method.
+ * 
+ * For thread-isolated validation (e.g., in save_memory), use getEntityNamesInThread() instead.
  */
 export async function getAllEntityNames(storage: IStorageAdapter): Promise<Set<string>> {
   const graph = await storage.loadGraph();
   const entityNames = new Set<string>();
   
-  // Return all entities in the graph that can be referenced
-  // This allows incremental building: entities from previous save_memory calls
-  // can be referenced in new calls, enabling cross-save entity relations
+  // Return all entity names from all threads
   for (const entity of graph.entities) {
     entityNames.add(entity.name);
   }

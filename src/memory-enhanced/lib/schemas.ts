@@ -110,9 +110,9 @@ export const GetAnalyticsOutputSchema = z.object({
 
 // Schema for get_observation_history tool (Observation Versioning section of spec)
 export const GetObservationHistoryInputSchema = z.object({
+  threadId: z.string().min(1).describe("Thread ID for this conversation/project"),
   entityName: z.string().min(1).describe("Name of the entity"),
-  observationId: z.string().min(1).describe("ID of the observation to retrieve history for"),
-  threadId: z.string().min(1).describe("Thread ID for this conversation/project")
+  observationId: z.string().min(1).describe("ID of the observation to retrieve history for")
 });
 
 export const GetObservationHistoryOutputSchema = z.object({
@@ -175,14 +175,14 @@ export const ReadGraphInputSchema = z.object({
 
 // Schema for search_nodes tool
 export const SearchNodesInputSchema = z.object({
-  query: z.string().min(1).describe("Search query string"),
-  threadId: z.string().min(1).describe("Thread ID for this conversation/project")
+  threadId: z.string().min(1).describe("Thread ID for this conversation/project"),
+  query: z.string().min(1).describe("Search query string")
 });
 
 // Schema for open_nodes tool
 export const OpenNodesInputSchema = z.object({
-  names: z.array(z.string()).min(1).describe("Array of entity names to open"),
-  threadId: z.string().min(1).describe("Thread ID for this conversation/project")
+  threadId: z.string().min(1).describe("Thread ID for this conversation/project"),
+  names: z.array(z.string()).min(1).describe("Array of entity names to open")
 });
 
 // Schema for query_nodes tool
