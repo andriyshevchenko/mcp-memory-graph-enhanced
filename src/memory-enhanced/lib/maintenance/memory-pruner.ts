@@ -77,10 +77,13 @@ export async function pruneMemory(
   
   await storage.saveGraph(graph);
   
+  // Count remaining relations in the thread after pruning
+  const finalRelationCount = graph.relations.filter(r => 
+    r.agentThreadId === threadId && keptEntityNames.has(r.from) && keptEntityNames.has(r.to)
+  ).length;
+  
   return {
     removedEntities: initialEntityCount - entitiesToKeep.length,
-    removedRelations: initialRelationCount - graph.relations.filter(r => 
-      r.agentThreadId === threadId && keptEntityNames.has(r.from) && keptEntityNames.has(r.to)
-    ).length
+    removedRelations: initialRelationCount - finalRelationCount
   };
 }

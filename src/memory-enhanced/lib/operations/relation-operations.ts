@@ -10,7 +10,7 @@ import { createRelationKey } from '../utils/relation-key.js';
  * Create new relations in the knowledge graph
  * Relations are globally unique by (from, to, relationType) across all threads
  * This enables multiple threads to collaboratively build the knowledge graph
- * Thread parameter is used for validation to ensure relations being created have the correct threadId
+ * @param threadId - Thread ID passed for context (relations already have agentThreadId set)
  */
 export async function createRelations(
   storage: IStorageAdapter,
