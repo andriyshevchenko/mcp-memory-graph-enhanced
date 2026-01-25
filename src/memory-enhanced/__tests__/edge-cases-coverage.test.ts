@@ -184,7 +184,7 @@ describe('Edge Cases for Coverage', () => {
         }
       ]);
 
-      const result = await manager.queryNodes({
+      const result = await manager.queryNodes('thread1', {
         entityType: 'TestType',
         minConfidence: 0.8,
         minImportance: 0.8,
@@ -243,8 +243,8 @@ describe('Edge Cases for Coverage', () => {
       ]);
 
       // Search is case-insensitive
-      const result1 = await manager.searchNodes('uppercase');
-      const result2 = await manager.searchNodes('UPPERCASE');
+      const result1 = await manager.searchNodes('thread1', 'uppercase');
+      const result2 = await manager.searchNodes('thread1', 'UPPERCASE');
 
       expect(result1.entities.length).toBeGreaterThan(0);
       expect(result2.entities.length).toBeGreaterThan(0);
