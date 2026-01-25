@@ -152,15 +152,26 @@ await manager.readGraph('test-thread-id');
 // No threadId required, returned all data
 manager.readGraph()
 manager.searchNodes(query)
+manager.openNodes(names)
+manager.queryNodes(filters?)
 manager.listEntities(threadId?, entityType?, namePattern?)
 ```
 
 ### After (New API)
 ```typescript
-// threadId required for all read operations
+// threadId required as FIRST parameter for all read operations (consistent API design)
 manager.readGraph(threadId)
-manager.searchNodes(query, threadId)
+manager.searchNodes(threadId, query)
+manager.openNodes(threadId, names)
+manager.queryNodes(threadId, filters?)
 manager.listEntities(threadId, entityType?, namePattern?)
+manager.getMemoryStats(threadId)
+manager.getRecentChanges(threadId, since)
+manager.findRelationPath(threadId, from, to, maxDepth?)
+manager.detectConflicts(threadId)
+manager.getContext(threadId, entityNames, depth?)
+manager.getFlaggedEntities(threadId)
+manager.getObservationHistory(threadId, entityName, observationId)
 ```
 
 ## Migration Guide for Clients
