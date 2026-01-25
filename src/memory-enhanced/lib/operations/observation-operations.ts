@@ -11,9 +11,11 @@ import { validateObservationNotSuperseded, createObservationVersion } from '../u
 /**
  * Add observations to entities
  * Checks for duplicate content and creates version chains when content is updated
+ * Thread parameter is used for validation to ensure only entities in the thread are modified
  */
 export async function addObservations(
   storage: IStorageAdapter,
+  threadId: string,
   observations: {
     entityName: string;
     contents: string[];
@@ -25,9 +27,10 @@ export async function addObservations(
 ): Promise<{ entityName: string; addedObservations: Observation[] }[]> {
   const graph = await storage.loadGraph();
   const results = observations.map(o => {
-    const entity = graph.entities.find(e => e.name === o.entityName);
+    // Find entity - thread validation happens here to ensure we only modify entities from this thread
+    const entity = graph.entities.find(e => e.name === o.entityName && e.agentThreadId === threadId);
     if (!entity) {
-      throw new Error(`Entity with name ${o.entityName} not found`);
+      throw new Error(`Entity with name ${o.entityName} not found in thread ${threadId}`);
     }
     
     // Check for existing observations with same content to create version chain
@@ -80,14 +83,17 @@ export async function addObservations(
 /**
  * Delete observations from entities
  * Supports deletion by content (backward compatibility) or by ID
+ * Thread parameter is used for validation to ensure only entities in the thread are modified
  */
 export async function deleteObservations(
   storage: IStorageAdapter,
+  threadId: string,
   deletions: { entityName: string; observations: string[] }[]
 ): Promise<void> {
   const graph = await storage.loadGraph();
   deletions.forEach(d => {
-    const entity = graph.entities.find(e => e.name === d.entityName);
+    // Find entity - thread validation happens here to ensure we only modify entities from this thread
+    const entity = graph.entities.find(e => e.name === d.entityName && e.agentThreadId === threadId);
     if (entity) {
       // Delete observations by content (for backward compatibility) or by ID
       entity.observations = entity.observations.filter(o => 

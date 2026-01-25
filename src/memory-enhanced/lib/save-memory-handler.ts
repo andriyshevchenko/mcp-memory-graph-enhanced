@@ -14,8 +14,8 @@ import { randomUUID } from 'crypto';
  */
 export async function handleSaveMemory(
   input: SaveMemoryInput,
-  createEntitiesFn: (entities: Entity[]) => Promise<Entity[]>,
-  createRelationsFn: (relations: Relation[]) => Promise<Relation[]>,
+  createEntitiesFn: (threadId: string, entities: Entity[]) => Promise<Entity[]>,
+  createRelationsFn: (threadId: string, relations: Relation[]) => Promise<Relation[]>,
   getExistingEntityNamesFn?: (threadId: string) => Promise<Set<string>>
 ): Promise<SaveMemoryOutput> {
   const timestamp = new Date().toISOString();
@@ -109,7 +109,7 @@ export async function handleSaveMemory(
     });
     
     // Create all entities first
-    const createdEntities = await createEntitiesFn(entities);
+    const createdEntities = await createEntitiesFn(input.threadId, entities);
     
     // Build relations array from all entities
     const relations: Relation[] = [];
@@ -139,7 +139,7 @@ export async function handleSaveMemory(
     }
     
     // Create all relations
-    const createdRelations = await createRelationsFn(relations);
+    const createdRelations = await createRelationsFn(input.threadId, relations);
     
     // Calculate quality score
     const qualityScore = calculateQualityScore(input.entities);

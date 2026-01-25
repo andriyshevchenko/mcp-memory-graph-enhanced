@@ -52,7 +52,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
         },
       ];
 
-      const newEntities = await manager.createEntities(entities);
+      const newEntities = await manager.createEntities('thread-001', entities);
       expect(newEntities).toHaveLength(2);
       expect(newEntities).toEqual(entities);
 
@@ -76,8 +76,8 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
         },
       ];
 
-      await manager.createEntities(entities);
-      const newEntities = await manager.createEntities(entities);
+      await manager.createEntities('thread-001', entities);
+      const newEntities = await manager.createEntities('thread-001', entities);
 
       expect(newEntities).toHaveLength(0);
 
@@ -86,14 +86,14 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
     });
 
     it('should handle empty entity arrays', async () => {
-      const newEntities = await manager.createEntities([]);
+      const newEntities = await manager.createEntities('test-thread', []);
       expect(newEntities).toHaveLength(0);
     });
   });
 
   describe('createRelations with metadata', () => {
     it('should create new relations with all metadata fields', async () => {
-      await manager.createEntities([
+      await manager.createEntities('thread-001', [
         { 
           name: 'Alice', 
           entityType: 'person', 
@@ -126,7 +126,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
         },
       ];
 
-      const newRelations = await manager.createRelations(relations);
+      const newRelations = await manager.createRelations('thread-001', relations);
       expect(newRelations).toHaveLength(1);
       expect(newRelations).toEqual(relations);
 
@@ -138,7 +138,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
     });
 
     it('should not create duplicate relations', async () => {
-      await manager.createEntities([
+      await manager.createEntities('thread-001', [
         { 
           name: 'Alice', 
           entityType: 'person', 
@@ -171,8 +171,8 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
         },
       ];
 
-      await manager.createRelations(relations);
-      const newRelations = await manager.createRelations(relations);
+      await manager.createRelations('thread-001', relations);
+      const newRelations = await manager.createRelations('thread-001', relations);
 
       expect(newRelations).toHaveLength(0);
 
@@ -207,8 +207,8 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
         },
       ];
 
-      await manager.createEntities(entitiesThread1);
-      await manager.createEntities(entitiesThread2);
+      await manager.createEntities('thread-001', entitiesThread1);
+      await manager.createEntities('thread-002', entitiesThread2);
 
       // Check that two separate files were created
       const files = await fs.readdir(testDirPath);
@@ -228,7 +228,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
     });
 
     it('should store relations from different threads in separate files', async () => {
-      await manager.createEntities([
+      await manager.createEntities('thread-001', [
         { 
           name: 'Alice', 
           entityType: 'person', 
@@ -282,8 +282,8 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
         },
       ];
 
-      await manager.createRelations(relationsThread1);
-      await manager.createRelations(relationsThread2);
+      await manager.createRelations('thread-001', relationsThread1);
+      await manager.createRelations('thread-002', relationsThread2);
 
       // Verify relations are readable from each thread
       const graph1 = await manager.readGraph('thread-001');
@@ -303,7 +303,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
 
   describe('addObservations with metadata', () => {
     it('should add observations and update entity metadata', async () => {
-      await manager.createEntities([
+      await manager.createEntities('thread-001', [
         { 
           name: 'Alice', 
           entityType: 'person', 
@@ -334,7 +334,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
         }
       ];
 
-      const result = await manager.addObservations(observations);
+      const result = await manager.addObservations('thread-001', observations);
       expect(result).toHaveLength(1);
       expect(result[0].addedObservations).toHaveLength(2);
 
@@ -347,7 +347,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
     });
 
     it('should not add duplicate observations', async () => {
-      await manager.createEntities([
+      await manager.createEntities('thread-001', [
         { 
           name: 'Alice', 
           entityType: 'person', 
@@ -378,7 +378,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
         }
       ];
 
-      const result = await manager.addObservations(observations);
+      const result = await manager.addObservations('thread-001', observations);
       // Should not add duplicate observation with same content
       expect(result[0].addedObservations).toHaveLength(0);
     });
@@ -395,13 +395,13 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
         }
       ];
 
-      await expect(manager.addObservations(observations)).rejects.toThrow('Entity with name NonExistent not found');
+      await expect(manager.addObservations('thread-001', observations)).rejects.toThrow('Entity with name NonExistent not found');
     });
   });
 
   describe('deleteEntities', () => {
     it('should delete entities and associated relations', async () => {
-      await manager.createEntities([
+      await manager.createEntities('thread-001', [
         { 
           name: 'Alice', 
           entityType: 'person', 
@@ -422,7 +422,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
         },
       ]);
 
-      await manager.createRelations([
+      await manager.createRelations('thread-001', [
         { 
           from: 'Alice', 
           to: 'Bob', 
@@ -434,7 +434,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
         },
       ]);
 
-      await manager.deleteEntities(['Alice']);
+      await manager.deleteEntities('thread-001', ['Alice']);
 
       const graph = await manager.readGraph('thread-001');
       expect(graph.entities).toHaveLength(1);
@@ -445,7 +445,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
 
   describe('searchNodes', () => {
     it('should search entities by name, type, and observations', async () => {
-      await manager.createEntities([
+      await manager.createEntities('thread-001', [
         { 
           name: 'Alice', 
           entityType: 'person', 
@@ -507,7 +507,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
 
   describe('openNodes', () => {
     it('should retrieve specific entities by name', async () => {
-      await manager.createEntities([
+      await manager.createEntities('thread-001', [
         { 
           name: 'Alice', 
           entityType: 'person', 
@@ -537,7 +537,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
   describe('queryNodes with range filtering', () => {
     beforeEach(async () => {
       // Create test data with varied metadata
-      await manager.createEntities([
+      await manager.createEntities('thread-001', [
         {
           name: 'Alice',
           entityType: 'person',
@@ -567,7 +567,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
         },
       ]);
 
-      await manager.createRelations([
+      await manager.createRelations('thread-001', [
         {
           from: 'Alice',
           to: 'Bob',
@@ -683,7 +683,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
   describe('Cross-thread operations', () => {
     it('should maintain single entity when observations added from different thread', async () => {
       // Thread-001 creates entity
-      await manager.createEntities([
+      await manager.createEntities('thread-001', [
         {
           name: 'Alice',
           entityType: 'person',
@@ -695,8 +695,8 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
         }
       ]);
 
-      // Thread-002 adds observations to Alice
-      await manager.addObservations([
+      // Thread-002 adds observations to Alice (but Alice is in thread-001)
+      await manager.addObservations('thread-001', [
         {
           entityName: 'Alice',
           contents: ['lives in SF', 'loves coffee'],
@@ -731,7 +731,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
     });
 
     it('should list single conversation with correct metadata', async () => {
-      await manager.createEntities([
+      await manager.createEntities('thread-001', [
         {
           name: 'Alice',
           entityType: 'person',
@@ -752,7 +752,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
         }
       ]);
 
-      await manager.createRelations([
+      await manager.createRelations('thread-001', [
         {
           from: 'Alice',
           to: 'Bob',
@@ -777,7 +777,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
 
     it('should list multiple conversations sorted by last updated', async () => {
       // Create entities in thread-001
-      await manager.createEntities([
+      await manager.createEntities('thread-001', [
         {
           name: 'Alice',
           entityType: 'person',
@@ -790,7 +790,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
       ]);
 
       // Create entities in thread-002 (more recent)
-      await manager.createEntities([
+      await manager.createEntities('thread-002', [
         {
           name: 'Bob',
           entityType: 'person',
@@ -812,7 +812,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
       ]);
 
       // Create entities in thread-003
-      await manager.createEntities([
+      await manager.createEntities('thread-003', [
         {
           name: 'Dave',
           entityType: 'person',
@@ -840,7 +840,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
     });
 
     it('should count both entities and relations from the same thread', async () => {
-      await manager.createEntities([
+      await manager.createEntities('thread-001', [
         {
           name: 'Alice',
           entityType: 'person',
@@ -870,7 +870,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
         }
       ]);
 
-      await manager.createRelations([
+      await manager.createRelations('thread-001', [
         {
           from: 'Alice',
           to: 'Bob',
@@ -904,7 +904,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
 
     it('should handle threads with only relations (no entities from that thread)', async () => {
       // Create entities in thread-001
-      await manager.createEntities([
+      await manager.createEntities('thread-001', [
         {
           name: 'Alice',
           entityType: 'person',
@@ -926,7 +926,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
       ]);
 
       // Create relation in thread-002 (different thread)
-      await manager.createRelations([
+      await manager.createRelations('thread-002', [
         {
           from: 'Alice',
           to: 'Bob',
@@ -957,7 +957,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
   describe('listEntities', () => {
     beforeEach(async () => {
       // Create test entities with different types and threads
-      const entities: Entity[] = [
+      const entitiesThread1: Entity[] = [
         {
           name: 'ServiceA',
           entityType: 'Service',
@@ -984,7 +984,9 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
           timestamp: '2024-01-01T00:00:00Z',
           confidence: 1.0,
           importance: 0.7
-        },
+        }
+      ];
+      const entitiesThread2: Entity[] = [
         {
           name: 'ServiceC',
           entityType: 'Service',
@@ -995,7 +997,8 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
           importance: 0.6
         }
       ];
-      await manager.createEntities(entities);
+      await manager.createEntities('thread-1', entitiesThread1);
+      await manager.createEntities('thread-2', entitiesThread2);
     });
 
     it('should list all entities from a thread when only threadId is provided', async () => {

@@ -55,7 +55,7 @@ describe('Observation Versioning - getObservationHistory', () => {
       }
     ];
 
-    await manager.createEntities(entities);
+    await manager.createEntities('test-thread', entities);
 
     await expect(
       manager.getObservationHistory('test-thread', 'TestEntity', 'non-existent-obs')
@@ -81,7 +81,7 @@ describe('Observation Versioning - getObservationHistory', () => {
       }
     ];
 
-    await manager.createEntities(entities);
+    await manager.createEntities('test-thread', entities);
 
     const history = await manager.getObservationHistory('test-thread', 'TestEntity', 'obs-standalone');
 
@@ -129,7 +129,7 @@ describe('Observation Versioning - getObservationHistory', () => {
       }
     ];
 
-    await manager.createEntities(entities);
+    await manager.createEntities('test-thread', entities);
 
     // Start from v1 and get full history
     const history = await manager.getObservationHistory('test-thread', 'TestEntity', 'obs-v1');
@@ -179,7 +179,7 @@ describe('Observation Versioning - getObservationHistory', () => {
       }
     ];
 
-    await manager.createEntities(entities);
+    await manager.createEntities('test-thread', entities);
 
     // Start from v3 and get full history
     const history = await manager.getObservationHistory('test-thread', 'TestEntity', 'obs-v3');
@@ -229,7 +229,7 @@ describe('Observation Versioning - getObservationHistory', () => {
       }
     ];
 
-    await manager.createEntities(entities);
+    await manager.createEntities('test-thread', entities);
 
     // Start from v2 and get full history
     const history = await manager.getObservationHistory('test-thread', 'TestEntity', 'obs-v2');
@@ -270,7 +270,7 @@ describe('Observation Versioning - getObservationHistory', () => {
       }
     ];
 
-    await manager.createEntities(entities);
+    await manager.createEntities('test-thread', entities);
 
     const history = await manager.getObservationHistory('test-thread', 'TestEntity', 'obs-v1');
 
@@ -302,7 +302,7 @@ describe('Observation Versioning - getObservationHistory', () => {
       }
     ];
 
-    await manager.createEntities(entities);
+    await manager.createEntities('test-thread', entities);
 
     const history = await manager.getObservationHistory('test-thread', 'TestEntity', 'obs-full');
 

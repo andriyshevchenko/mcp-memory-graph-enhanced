@@ -36,7 +36,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
 
     it('should return correct stats for populated graph', async () => {
       // Arrange
-      await manager.createEntities([
+      await manager.createEntities('thread1', [
         {
           name: 'Entity1',
           entityType: 'Person',
@@ -69,7 +69,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
         }
       ]);
 
-      await manager.createRelations([
+      await manager.createRelations('thread1', [
         {
           from: 'Entity1',
           to: 'Entity2',
@@ -96,7 +96,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
       const oldDate = new Date('2020-01-01').toISOString();
 
       // Create entity with old timestamp
-      await manager.createEntities([
+      await manager.createEntities('thread1', [
         {
           name: 'OldEntity',
           entityType: 'Type1',
@@ -124,7 +124,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
     it('should include relations with recent timestamps', async () => {
       const recentDate = new Date().toISOString();
       
-      await manager.createEntities([
+      await manager.createEntities('thread1', [
         {
           name: 'E1',
           entityType: 'Type',
@@ -157,7 +157,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
         }
       ]);
 
-      await manager.createRelations([
+      await manager.createRelations('thread1', [
         {
           from: 'E1',
           to: 'E2',
@@ -180,7 +180,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
 
   describe('findRelationPath', () => {
     it('should return empty path when no connection exists', async () => {
-      await manager.createEntities([
+      await manager.createEntities('thread1', [
         {
           name: 'Isolated1',
           entityType: 'Type',
@@ -220,7 +220,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
     });
 
     it('should find direct path between connected entities', async () => {
-      await manager.createEntities([
+      await manager.createEntities('thread1', [
         {
           name: 'Start',
           entityType: 'Type',
@@ -253,7 +253,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
         }
       ]);
 
-      await manager.createRelations([
+      await manager.createRelations('thread1', [
         {
           from: 'Start',
           to: 'End',
@@ -290,9 +290,9 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
         importance: 0.8
       }));
 
-      await manager.createEntities(entities);
+      await manager.createEntities('thread1', entities);
 
-      await manager.createRelations([
+      await manager.createRelations('thread1', [
         {
           from: 'A',
           to: 'B',
@@ -331,7 +331,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
 
   describe('detectConflicts', () => {
     it('should detect no conflicts in consistent observations', async () => {
-      await manager.createEntities([
+      await manager.createEntities('thread1', [
         {
           name: 'ConsistentEntity',
           entityType: 'Person',
@@ -364,7 +364,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
     });
 
     it('should detect conflicts with negation words', async () => {
-      await manager.createEntities([
+      await manager.createEntities('thread1', [
         {
           name: 'ConflictingEntity',
           entityType: 'Person',
@@ -403,7 +403,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
     it('should not remove entities when no criteria match', async () => {
       const recentDate = new Date().toISOString();
       
-      await manager.createEntities([
+      await manager.createEntities('thread1', [
         {
           name: 'RecentEntity',
           entityType: 'Type',
@@ -421,7 +421,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
         }
       ]);
 
-      const result = await manager.pruneMemory({
+      const result = await manager.pruneMemory('thread1', {
         olderThan: new Date('2020-01-01').toISOString(),
         importanceLessThan: 0.5
       });
@@ -432,7 +432,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
     it('should remove old low-importance entities', async () => {
       const oldDate = new Date('2020-01-01').toISOString();
       
-      await manager.createEntities([
+      await manager.createEntities('thread1', [
         {
           name: 'OldLowImportance',
           entityType: 'Type',
@@ -450,7 +450,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
         }
       ]);
 
-      const result = await manager.pruneMemory({
+      const result = await manager.pruneMemory('thread1', {
         olderThan: new Date().toISOString(),
         importanceLessThan: 0.5
       });
@@ -462,7 +462,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
       const oldDate = new Date('2020-01-01').toISOString();
       
       // Create multiple entities with varying importance
-      await manager.createEntities([
+      await manager.createEntities('thread1', [
         {
           name: 'Entity1',
           entityType: 'Type',
@@ -495,7 +495,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
         }
       ]);
 
-      const result = await manager.pruneMemory({
+      const result = await manager.pruneMemory('thread1', {
         importanceLessThan: 0.5,  // Would normally remove entities below 0.5
         keepMinEntities: 10        // But keep at least 10
       });
@@ -509,7 +509,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
 
   describe('bulkUpdate', () => {
     it('should update multiple entities at once', async () => {
-      await manager.createEntities([
+      await manager.createEntities('thread1', [
         {
           name: 'Entity1',
           entityType: 'Type',
@@ -542,7 +542,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
         }
       ]);
 
-      const result = await manager.bulkUpdate([
+      const result = await manager.bulkUpdate('thread1', [
         { entityName: 'Entity1', confidence: 0.9 },
         { entityName: 'Entity2', importance: 0.9 }
       ]);
@@ -559,7 +559,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
     });
 
     it('should report not found entities', async () => {
-      const result = await manager.bulkUpdate([
+      const result = await manager.bulkUpdate('thread1', [
         { entityName: 'NonExistent', confidence: 0.9 }
       ]);
 
@@ -568,7 +568,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
     });
 
     it('should add observations during bulk update', async () => {
-      await manager.createEntities([
+      await manager.createEntities('thread1', [
         {
           name: 'Entity1',
           entityType: 'Type',
@@ -586,7 +586,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
         }
       ]);
 
-      const result = await manager.bulkUpdate([
+      const result = await manager.bulkUpdate('thread1', [
         {
           entityName: 'Entity1',
           addObservations: ['New observation 1', 'New observation 2']
@@ -603,7 +603,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
 
   describe('flagForReview', () => {
     it('should flag entity for review', async () => {
-      await manager.createEntities([
+      await manager.createEntities('thread1', [
         {
           name: 'FlaggedEntity',
           entityType: 'Type',
@@ -621,7 +621,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
         }
       ]);
 
-      await manager.flagForReview('FlaggedEntity', 'Needs verification');
+      await manager.flagForReview('thread1', 'FlaggedEntity', 'Needs verification');
 
       const flaggedEntities = await manager.getFlaggedEntities('thread1');
       expect(flaggedEntities.length).toBeGreaterThan(0);
@@ -629,7 +629,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
     });
 
     it('should include reviewer when provided', async () => {
-      await manager.createEntities([
+      await manager.createEntities('thread1', [
         {
           name: 'ReviewEntity',
           entityType: 'Type',
@@ -647,7 +647,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
         }
       ]);
 
-      await manager.flagForReview('ReviewEntity', 'Check accuracy', 'Reviewer1');
+      await manager.flagForReview('thread1', 'ReviewEntity', 'Check accuracy', 'Reviewer1');
 
       const flaggedEntities = await manager.getFlaggedEntities('thread1');
       expect(flaggedEntities.length).toBeGreaterThan(0);
@@ -655,14 +655,14 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
 
     it('should throw when flagging non-existent entity', async () => {
       await expect(
-        manager.flagForReview('NonExistent', 'Test')
+        manager.flagForReview('thread1', 'NonExistent', 'Test')
       ).rejects.toThrow();
     });
   });
 
   describe('getFlaggedEntities', () => {
     it('should return empty array when no entities are flagged', async () => {
-      await manager.createEntities([
+      await manager.createEntities('thread1', [
         {
           name: 'UnflaggedEntity',
           entityType: 'Type',
@@ -688,7 +688,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
   describe('getContext', () => {
     it('should retrieve entities and relations within specified depth', async () => {
       // Create a small graph: A -> B -> C
-      await manager.createEntities([
+      await manager.createEntities('thread1', [
         {
           name: 'A',
           entityType: 'Type',
@@ -736,7 +736,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
         }
       ]);
 
-      await manager.createRelations([
+      await manager.createRelations('thread1', [
         {
           from: 'A',
           to: 'B',
@@ -764,7 +764,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
     });
 
     it('should respect depth parameter', async () => {
-      await manager.createEntities([
+      await manager.createEntities('thread1', [
         {
           name: 'Central',
           entityType: 'Type',
@@ -806,9 +806,9 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
         importance: 0.8
       }));
 
-      await manager.createEntities(entities);
+      await manager.createEntities('thread1', entities);
 
-      await manager.createRelations([
+      await manager.createRelations('thread1', [
         {
           from: 'ContextA',
           to: 'ContextB',
@@ -848,7 +848,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
 
   describe('listConversations', () => {
     it('should list all conversations with metadata', async () => {
-      await manager.createEntities([
+      await manager.createEntities('thread1', [
         {
           name: 'Entity1',
           entityType: 'Type',

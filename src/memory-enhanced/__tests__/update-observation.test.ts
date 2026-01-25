@@ -38,7 +38,7 @@ describe('updateObservation', () => {
 
   it('should update an observation and create a new version', async () => {
     // Arrange
-    await manager.createEntities([createTestEntity()]);
+    await manager.createEntities('test-thread', [createTestEntity()]);
 
     // Act
     const updatedObs = await manager.updateObservation(
@@ -67,7 +67,7 @@ describe('updateObservation', () => {
 
   it('should inherit confidence and importance from old observation if not provided', async () => {
     // Arrange
-    await manager.createEntities([
+    await manager.createEntities('test-thread', [
       createTestEntity({
         observations: [{
           id: 'obs-001',
@@ -91,7 +91,7 @@ describe('updateObservation', () => {
 
   it('should inherit from entity if observation does not have confidence/importance', async () => {
     // Arrange - Observation without confidence/importance to test entity inheritance
-    await manager.createEntities([createEntityWithMinimalObservation()]);
+    await manager.createEntities('test-thread', [createEntityWithMinimalObservation()]);
 
     // Act - Update without providing confidence/importance
     const updatedObs = await manager.updateObservation(createUpdateParams());
@@ -110,7 +110,7 @@ describe('updateObservation', () => {
 
   it('should throw error if observation not found', async () => {
     // Arrange
-    await manager.createEntities([createTestEntity()]);
+    await manager.createEntities('test-thread', [createTestEntity()]);
 
     // Act & Assert
     await expect(
@@ -120,7 +120,7 @@ describe('updateObservation', () => {
 
   it('should throw error if observation already superseded', async () => {
     // Arrange
-    await manager.createEntities([createEntityWithSupersededObservation()]);
+    await manager.createEntities('test-thread', [createEntityWithSupersededObservation()]);
 
     // Act & Assert
     await expect(
@@ -135,7 +135,7 @@ describe('updateObservation', () => {
 
   it('should create a valid version chain', async () => {
     // Arrange
-    await manager.createEntities([
+    await manager.createEntities('test-thread', [
       createTestEntity({
         observations: [{
           id: 'obs-v1',
@@ -193,7 +193,7 @@ describe('updateObservation', () => {
 
   it('should update entity timestamp', async () => {
     // Arrange
-    await manager.createEntities([createTestEntity()]);
+    await manager.createEntities('test-thread', [createTestEntity()]);
 
     // Act
     await manager.updateObservation(createUpdateParams());

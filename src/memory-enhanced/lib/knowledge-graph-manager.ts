@@ -56,29 +56,29 @@ export class KnowledgeGraphManager {
   }
 
   // Entity Operations
-  async createEntities(entities: Entity[]): Promise<Entity[]> {
+  async createEntities(threadId: string, entities: Entity[]): Promise<Entity[]> {
     await this.ensureInitialized();
-    return EntityOps.createEntities(this.storage, entities);
+    return EntityOps.createEntities(this.storage, threadId, entities);
   }
 
-  async deleteEntities(entityNames: string[]): Promise<void> {
+  async deleteEntities(threadId: string, entityNames: string[]): Promise<void> {
     await this.ensureInitialized();
-    return EntityOps.deleteEntities(this.storage, entityNames);
+    return EntityOps.deleteEntities(this.storage, threadId, entityNames);
   }
 
   // Relation Operations
-  async createRelations(relations: Relation[]): Promise<Relation[]> {
+  async createRelations(threadId: string, relations: Relation[]): Promise<Relation[]> {
     await this.ensureInitialized();
-    return RelationOps.createRelations(this.storage, relations);
+    return RelationOps.createRelations(this.storage, threadId, relations);
   }
 
-  async deleteRelations(relations: Relation[]): Promise<void> {
+  async deleteRelations(threadId: string, relations: Relation[]): Promise<void> {
     await this.ensureInitialized();
-    return RelationOps.deleteRelations(this.storage, relations);
+    return RelationOps.deleteRelations(this.storage, threadId, relations);
   }
 
   // Observation Operations
-  async addObservations(observations: {
+  async addObservations(threadId: string, observations: {
     entityName: string;
     contents: string[];
     agentThreadId: string;
@@ -87,12 +87,12 @@ export class KnowledgeGraphManager {
     importance: number;
   }[]): Promise<{ entityName: string; addedObservations: Observation[] }[]> {
     await this.ensureInitialized();
-    return ObservationOps.addObservations(this.storage, observations);
+    return ObservationOps.addObservations(this.storage, threadId, observations);
   }
 
-  async deleteObservations(deletions: { entityName: string; observations: string[] }[]): Promise<void> {
+  async deleteObservations(threadId: string, deletions: { entityName: string; observations: string[] }[]): Promise<void> {
     await this.ensureInitialized();
-    return ObservationOps.deleteObservations(this.storage, deletions);
+    return ObservationOps.deleteObservations(this.storage, threadId, deletions);
   }
 
   async updateObservation(params: {
@@ -229,29 +229,29 @@ export class KnowledgeGraphManager {
   }
 
   // Memory Maintenance
-  async pruneMemory(options: {
+  async pruneMemory(threadId: string, options: {
     olderThan?: string;
     importanceLessThan?: number;
     keepMinEntities?: number;
   }): Promise<{ removedEntities: number; removedRelations: number }> {
     await this.ensureInitialized();
-    return MemoryPruner.pruneMemory(this.storage, options);
+    return MemoryPruner.pruneMemory(this.storage, threadId, options);
   }
 
-  async bulkUpdate(updates: {
+  async bulkUpdate(threadId: string, updates: {
     entityName: string;
     confidence?: number;
     importance?: number;
     addObservations?: string[];
   }[]): Promise<{ updated: number; notFound: string[] }> {
     await this.ensureInitialized();
-    return BulkUpdater.bulkUpdate(this.storage, updates);
+    return BulkUpdater.bulkUpdate(this.storage, threadId, updates);
   }
 
   // Collaboration Features
-  async flagForReview(entityName: string, reason: string, reviewer?: string): Promise<void> {
+  async flagForReview(threadId: string, entityName: string, reason: string, reviewer?: string): Promise<void> {
     await this.ensureInitialized();
-    return FlagManager.flagForReview(this.storage, entityName, reason, reviewer);
+    return FlagManager.flagForReview(this.storage, threadId, entityName, reason, reviewer);
   }
 
   async getFlaggedEntities(threadId: string): Promise<Entity[]> {

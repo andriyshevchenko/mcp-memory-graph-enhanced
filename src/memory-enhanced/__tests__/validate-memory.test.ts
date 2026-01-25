@@ -152,7 +152,7 @@ describe('Validate Memory Tool', () => {
         importance: 0.8
       };
       
-      await manager.createEntities([existingEntity]);
+      await manager.createEntities('thread-1', [existingEntity]);
 
       // Get existing entity names
       const existingNames = await manager.getEntityNamesInThread('thread-1');

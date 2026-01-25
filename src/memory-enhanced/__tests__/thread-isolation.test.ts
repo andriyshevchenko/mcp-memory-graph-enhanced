@@ -87,8 +87,8 @@ describe('Thread Isolation', () => {
       }
     ];
 
-    await manager.createEntities(entitiesThread1);
-    await manager.createEntities(entitiesThread2);
+    await manager.createEntities(THREAD_1, entitiesThread1);
+    await manager.createEntities(THREAD_2, entitiesThread2);
 
     // Create relations in each thread
     const relationsThread1: Relation[] = [
@@ -115,8 +115,8 @@ describe('Thread Isolation', () => {
       }
     ];
 
-    await manager.createRelations(relationsThread1);
-    await manager.createRelations(relationsThread2);
+    await manager.createRelations(THREAD_1, relationsThread1);
+    await manager.createRelations(THREAD_2, relationsThread2);
   });
 
   afterEach(async () => {
@@ -284,7 +284,7 @@ describe('Thread Isolation', () => {
         importance: 0.5
       };
 
-      await manager.createEntities([entityWithConflict]);
+      await manager.createEntities(THREAD_1, [entityWithConflict]);
 
       const conflicts1 = await manager.detectConflicts(THREAD_1);
       expect(conflicts1.length).toBeGreaterThan(0);
@@ -308,7 +308,7 @@ describe('Thread Isolation', () => {
 
   describe('getFlaggedEntities', () => {
     it('should only return flagged entities from the specified thread', async () => {
-      await manager.flagForReview('User1', 'Test review');
+      await manager.flagForReview(THREAD_1, 'User1', 'Test review');
 
       const flagged1 = await manager.getFlaggedEntities(THREAD_1);
       expect(flagged1.length).toBeGreaterThan(0);

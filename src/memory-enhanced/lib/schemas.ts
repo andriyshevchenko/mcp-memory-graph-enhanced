@@ -231,3 +231,108 @@ export const GetContextInputSchema = z.object({
   entityNames: z.array(z.string()).min(1).describe("Array of entity names to get context for"),
   depth: z.number().int().min(1).optional().default(1).describe("Context depth (default: 1)")
 });
+
+// Schema for create_entities tool
+export const CreateEntitiesInputSchema = z.object({
+  threadId: z.string().min(1).describe("Thread ID for this conversation/project"),
+  entities: z.array(EntitySchema).describe("Array of entities to create")
+}).superRefine((data, ctx) => {
+  const { threadId, entities } = data;
+  entities.forEach((entity, index) => {
+    if (entity.agentThreadId !== threadId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Entity agentThreadId must match the top-level threadId",
+        path: ["entities", index, "agentThreadId"]
+      });
+    }
+  });
+});
+
+// Schema for create_relations tool
+export const CreateRelationsInputSchema = z.object({
+  threadId: z.string().min(1).describe("Thread ID for this conversation/project"),
+  relations: z.array(RelationSchema).describe("Array of relations to create")
+}).superRefine((data, ctx) => {
+  const { threadId, relations } = data;
+  relations.forEach((relation, index) => {
+    if (relation.agentThreadId !== threadId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Relation agentThreadId must match the top-level threadId",
+        path: ["relations", index, "agentThreadId"]
+      });
+    }
+  });
+});
+
+// Schema for add_observations tool
+export const AddObservationsInputSchema = z.object({
+  threadId: z.string().min(1).describe("Thread ID for this conversation/project"),
+  observations: z.array(z.object({
+    entityName: z.string().describe("The name of the entity to add the observations to"),
+    contents: z.array(z.string()).describe("An array of observation contents to add"),
+    agentThreadId: z.string().describe("The agent thread ID adding these observations"),
+    timestamp: z.string().describe("ISO 8601 timestamp of when the observations are added"),
+    confidence: z.number().min(0).max(1).describe("Confidence coefficient from 0 to 1"),
+    importance: z.number().min(0).max(1).describe("Importance for memory integrity if lost: 0 (not important) to 1 (critical)")
+  })).describe("Array of observations to add")
+}).superRefine((data, ctx) => {
+  data.observations.forEach((observation, index) => {
+    if (observation.agentThreadId !== data.threadId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "agentThreadId must match the top-level threadId",
+        path: ["observations", index, "agentThreadId"],
+      });
+    }
+  });
+});
+
+// Schema for delete_entities tool
+export const DeleteEntitiesInputSchema = z.object({
+  threadId: z.string().min(1).describe("Thread ID for this conversation/project"),
+  entityNames: z.array(z.string()).describe("An array of entity names to delete")
+});
+
+// Schema for delete_observations tool
+export const DeleteObservationsInputSchema = z.object({
+  threadId: z.string().min(1).describe("Thread ID for this conversation/project"),
+  deletions: z.array(z.object({
+    entityName: z.string().describe("The name of the entity containing the observations"),
+    observations: z.array(z.string()).describe("An array of observations to delete")
+  })).describe("Array of deletions to perform")
+});
+
+// Schema for delete_relations tool
+export const DeleteRelationsInputSchema = z.object({
+  threadId: z.string().min(1).describe("Thread ID for this conversation/project"),
+  relations: z.array(RelationSchema).describe("An array of relations to delete")
+});
+
+// Schema for prune_memory tool
+export const PruneMemoryInputSchema = z.object({
+  threadId: z.string().min(1).describe("Thread ID for this conversation/project"),
+  olderThan: z.string().optional().describe("ISO 8601 timestamp - remove entities older than this"),
+  importanceLessThan: z.number().min(0).max(1).optional().describe("Remove entities with importance less than this value"),
+  keepMinEntities: z.number().optional().describe("Minimum number of entities to keep regardless of filters")
+});
+
+// Schema for bulk_update tool
+export const BulkUpdateInputSchema = z.object({
+  threadId: z.string().min(1).describe("Thread ID for this conversation/project"),
+  updates: z.array(z.object({
+    entityName: z.string(),
+    confidence: z.number().min(0).max(1).optional(),
+    importance: z.number().min(0).max(1).optional(),
+    addObservations: z.array(z.string()).optional()
+  })).describe("Array of updates to perform")
+});
+
+// Schema for flag_for_review tool
+export const FlagForReviewInputSchema = z.object({
+  threadId: z.string().min(1).describe("Thread ID for this conversation/project"),
+  entityName: z.string().describe("Name of entity to flag"),
+  reason: z.string().describe("Reason for flagging"),
+  reviewer: z.string().optional().describe("Optional reviewer name")
+});

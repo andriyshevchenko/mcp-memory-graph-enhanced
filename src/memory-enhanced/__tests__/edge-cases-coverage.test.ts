@@ -26,7 +26,7 @@ describe('Edge Cases for Coverage', () => {
   describe('Analytics Edge Cases', () => {
     it('should handle orphaned entities with broken relations', async () => {
       // Create entities
-      await manager.createEntities([
+      await manager.createEntities('thread1', [
         {
           name: 'ValidEntity',
           entityType: 'Type',
@@ -66,7 +66,7 @@ describe('Edge Cases for Coverage', () => {
     });
 
     it('should handle entities with zero relations', async () => {
-      await manager.createEntities([
+      await manager.createEntities('thread1', [
         {
           name: 'IsolatedEntity1',
           entityType: 'Type',
@@ -106,7 +106,7 @@ describe('Edge Cases for Coverage', () => {
     });
 
     it('should analyze entities with multiple observation versions', async () => {
-      await manager.createEntities([
+      await manager.createEntities('thread1', [
         {
           name: 'VersionedEntity',
           entityType: 'Type',
@@ -135,7 +135,7 @@ describe('Edge Cases for Coverage', () => {
       ]);
 
       // Add a self-referencing relation to avoid orphaned status
-      await manager.createRelations([
+      await manager.createRelations('thread1', [
         {
           from: 'VersionedEntity',
           to: 'VersionedEntity',
@@ -166,7 +166,7 @@ describe('Edge Cases for Coverage', () => {
     it('should handle query with all filters', async () => {
       const futureDate = new Date(Date.now() + 100000).toISOString();
       
-      await manager.createEntities([
+      await manager.createEntities('thread1', [
         {
           name: 'FilterTestEntity',
           entityType: 'TestType',
@@ -198,7 +198,7 @@ describe('Edge Cases for Coverage', () => {
 
   describe('Search Edge Cases', () => {
     it('should handle search with special regex characters', async () => {
-      await manager.createEntities([
+      await manager.createEntities('thread1', [
         {
           name: 'Entity.With.Dots',
           entityType: 'Type',
@@ -224,7 +224,7 @@ describe('Edge Cases for Coverage', () => {
     });
 
     it('should handle case-insensitive search', async () => {
-      await manager.createEntities([
+      await manager.createEntities('thread1', [
         {
           name: 'TestEntityCaseSensitive',
           entityType: 'Type',

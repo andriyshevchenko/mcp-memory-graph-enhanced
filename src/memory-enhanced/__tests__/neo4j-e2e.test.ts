@@ -64,7 +64,7 @@ describe('Neo4j Storage Adapter E2E', () => {
       const entity = createTestEntity('TestEntity');
       
       // Act
-      await manager.createEntities([entity]);
+      await manager.createEntities('thread-001', [entity]);
       const graph = await manager.readGraph('thread-001');
       
       // Assert
@@ -95,7 +95,7 @@ describe('Neo4j Storage Adapter E2E', () => {
       };
       
       // Act
-      await manager.createEntities([entity]);
+      await manager.createEntities('thread-001', [entity]);
       const graph = await manager.readGraph('test-thread');
       
       // Assert
@@ -111,11 +111,11 @@ describe('Neo4j Storage Adapter E2E', () => {
       const entity1 = createTestEntity('Entity1');
       const entity2 = createTestEntity('Entity2');
       const relation = createTestRelation('Entity1', 'Entity2');
-      await manager.createEntities([entity1, entity2]);
-      await manager.createRelations([relation]);
+      await manager.createEntities('thread-001', [entity1, entity2]);
+      await manager.createRelations('thread-001', [relation]);
       
       // Act
-      await manager.deleteEntities(['Entity1']);
+      await manager.deleteEntities('thread-001', ['Entity1']);
       const graph = await manager.readGraph('thread-001');
       
       // Assert
@@ -135,8 +135,8 @@ describe('Neo4j Storage Adapter E2E', () => {
       const relation = createTestRelation('Entity1', 'Entity2');
       
       // Act
-      await manager.createEntities([entity1, entity2]);
-      await manager.createRelations([relation]);
+      await manager.createEntities('thread-001', [entity1, entity2]);
+      await manager.createRelations('thread-001', [relation]);
       const graph = await manager.readGraph('thread-001');
       
       // Assert
@@ -153,7 +153,7 @@ describe('Neo4j Storage Adapter E2E', () => {
       
       // Arrange & Act - First operation
       const entity1 = createTestEntity('Alice');
-      await manager.createEntities([entity1]);
+      await manager.createEntities('thread-001', [entity1]);
       let graph = await manager.readGraph('thread-001');
       
       // Assert - First operation
@@ -161,9 +161,9 @@ describe('Neo4j Storage Adapter E2E', () => {
       
       // Arrange & Act - Second operation
       const entity2 = createTestEntity('Bob');
-      await manager.createEntities([entity2]);
+      await manager.createEntities('thread-001', [entity2]);
       const relation = createTestRelation('Alice', 'Bob');
-      await manager.createRelations([relation]);
+      await manager.createRelations('thread-001', [relation]);
       graph = await manager.readGraph('thread-001');
       
       // Assert - Second operation
@@ -184,7 +184,7 @@ describe('Neo4j Storage Adapter E2E', () => {
       }
       
       // Act
-      await manager.createEntities(entities);
+      await manager.createEntities('thread-001', entities);
       const graph = await manager.readGraph('thread-001');
       
       // Assert
@@ -201,7 +201,7 @@ describe('Neo4j Storage Adapter E2E', () => {
       // Act - each operation creates an entity with a unique name
       for (let i = 0; i < entityCount; i++) {
         const entity = createTestEntity(`ConcurrentEntity_${Date.now()}_${i}`);
-        promises.push(manager.createEntities([entity]));
+        promises.push(manager.createEntities('thread-001', [entity]));
       }
       await Promise.all(promises);
       const graph = await manager.readGraph('thread-001');
@@ -253,7 +253,7 @@ describe('Neo4j Storage Adapter E2E', () => {
       };
       
       // Act
-      await manager.createEntities([entity1, entity2]);
+      await manager.createEntities('thread-001', [entity1, entity2]);
       const result = await manager.searchNodes('test-thread', 'Google');
       
       // Assert
@@ -314,8 +314,8 @@ describe('Neo4j Storage Adapter E2E', () => {
       };
 
       // Act
-      await manager.createEntities([entity1, entity2]);
-      await manager.createRelations([relation]);
+      await manager.createEntities('thread-001', [entity1, entity2]);
+      await manager.createRelations('thread-001', [relation]);
       const graph = await manager.readGraph('test-thread');
 
       // Assert

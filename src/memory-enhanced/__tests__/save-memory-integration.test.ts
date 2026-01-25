@@ -52,8 +52,8 @@ describe('Save Memory Handler - Integration Tests', () => {
 
     const result = await handleSaveMemory(
       input,
-      (entities) => manager.createEntities(entities),
-      (relations) => manager.createRelations(relations)
+      (threadId, entities) => manager.createEntities(threadId, entities),
+      (threadId, relations) => manager.createRelations(threadId, relations)
     );
 
     expect(result.success).toBe(true);
@@ -84,8 +84,8 @@ describe('Save Memory Handler - Integration Tests', () => {
 
     const result = await handleSaveMemory(
       input,
-      (entities) => manager.createEntities(entities),
-      (relations) => manager.createRelations(relations)
+      (threadId, entities) => manager.createEntities(threadId, entities),
+      (threadId, relations) => manager.createRelations(threadId, relations)
     );
 
     expect(result.success).toBe(false);
@@ -113,8 +113,8 @@ describe('Save Memory Handler - Integration Tests', () => {
 
     const result = await handleSaveMemory(
       input,
-      (entities) => manager.createEntities(entities),
-      (relations) => manager.createRelations(relations)
+      (threadId, entities) => manager.createEntities(threadId, entities),
+      (threadId, relations) => manager.createRelations(threadId, relations)
     );
 
     expect(result.success).toBe(false);
@@ -140,8 +140,8 @@ describe('Save Memory Handler - Integration Tests', () => {
 
     const result = await handleSaveMemory(
       input,
-      (entities) => manager.createEntities(entities),
-      (relations) => manager.createRelations(relations),
+      (threadId, entities) => manager.createEntities(threadId, entities),
+      (threadId, relations) => manager.createRelations(threadId, relations),
       (threadId) => manager.getEntityNamesInThread(threadId)
     );
 
@@ -175,8 +175,8 @@ describe('Save Memory Handler - Integration Tests', () => {
 
     const result = await handleSaveMemory(
       input,
-      (entities) => manager.createEntities(entities),
-      (relations) => manager.createRelations(relations)
+      (threadId, entities) => manager.createEntities(threadId, entities),
+      (threadId, relations) => manager.createRelations(threadId, relations)
     );
 
     expect(result.success).toBe(true);
@@ -216,8 +216,8 @@ describe('Save Memory Handler - Integration Tests', () => {
 
     const result = await handleSaveMemory(
       input,
-      (entities) => manager.createEntities(entities),
-      (relations) => manager.createRelations(relations)
+      (threadId, entities) => manager.createEntities(threadId, entities),
+      (threadId, relations) => manager.createRelations(threadId, relations)
     );
 
     expect(result.success).toBe(true);
@@ -251,8 +251,8 @@ describe('Save Memory Handler - Integration Tests', () => {
 
     const result = await handleSaveMemory(
       input,
-      (entities) => manager.createEntities(entities),
-      (relations) => manager.createRelations(relations)
+      (threadId, entities) => manager.createEntities(threadId, entities),
+      (threadId, relations) => manager.createRelations(threadId, relations)
     );
 
     expect(result.success).toBe(true);
@@ -292,8 +292,8 @@ describe('Save Memory Handler - Integration Tests', () => {
 
     const result = await handleSaveMemory(
       input,
-      (entities) => manager.createEntities(entities),
-      (relations) => manager.createRelations(relations)
+      (threadId, entities) => manager.createEntities(threadId, entities),
+      (threadId, relations) => manager.createRelations(threadId, relations)
     );
 
     expect(result.success).toBe(true);
@@ -356,14 +356,14 @@ describe('Save Memory Handler - Integration Tests', () => {
 
     const lowResult = await handleSaveMemory(
       lowQualityInput,
-      (entities) => manager.createEntities(entities),
-      (relations) => manager.createRelations(relations)
+      (threadId, entities) => manager.createEntities(threadId, entities),
+      (threadId, relations) => manager.createRelations(threadId, relations)
     );
 
     const highResult = await handleSaveMemory(
       highQualityInput,
-      (entities) => manager.createEntities(entities),
-      (relations) => manager.createRelations(relations)
+      (threadId, entities) => manager.createEntities(threadId, entities),
+      (threadId, relations) => manager.createRelations(threadId, relations)
     );
 
     expect(lowResult.success).toBe(true);
@@ -387,8 +387,8 @@ describe('Save Memory Handler - Integration Tests', () => {
 
     const firstResult = await handleSaveMemory(
       firstInput,
-      (entities) => manager.createEntities(entities),
-      (relations) => manager.createRelations(relations),
+      (threadId, entities) => manager.createEntities(threadId, entities),
+      (threadId, relations) => manager.createRelations(threadId, relations),
       (threadId) => manager.getEntityNamesInThread(threadId)
     );
 
@@ -410,8 +410,8 @@ describe('Save Memory Handler - Integration Tests', () => {
 
     const secondResult = await handleSaveMemory(
       secondInput,
-      (entities) => manager.createEntities(entities),
-      (relations) => manager.createRelations(relations),
+      (threadId, entities) => manager.createEntities(threadId, entities),
+      (threadId, relations) => manager.createRelations(threadId, relations),
       (threadId) => manager.getEntityNamesInThread(threadId)
     );
 
@@ -442,8 +442,8 @@ describe('Save Memory Handler - Integration Tests', () => {
 
     const result = await handleSaveMemory(
       input,
-      (entities) => manager.createEntities(entities),
-      (relations) => manager.createRelations(relations),
+      (threadId, entities) => manager.createEntities(threadId, entities),
+      (threadId, relations) => manager.createRelations(threadId, relations),
       (threadId) => manager.getEntityNamesInThread(threadId)
     );
 
@@ -477,8 +477,8 @@ describe('Save Memory Handler - Integration Tests', () => {
 
       const result = await handleSaveMemory(
         input,
-        (entities) => manager.createEntities(entities),
-        (relations) => manager.createRelations(relations),
+        (threadId, entities) => manager.createEntities(threadId, entities),
+        (threadId, relations) => manager.createRelations(threadId, relations),
         (threadId) => manager.getEntityNamesInThread(threadId)
       );
 
@@ -515,8 +515,8 @@ describe('Save Memory Handler - Integration Tests', () => {
 
       const result = await handleSaveMemory(
         input,
-        (entities) => manager.createEntities(entities),
-        (relations) => manager.createRelations(relations)
+        (threadId, entities) => manager.createEntities(threadId, entities),
+        (threadId, relations) => manager.createRelations(threadId, relations)
       );
 
       expect(result.success).toBe(false);
@@ -546,8 +546,8 @@ describe('Save Memory Handler - Integration Tests', () => {
 
       const result = await handleSaveMemory(
         input,
-        (entities) => manager.createEntities(entities),
-        (relations) => manager.createRelations(relations)
+        (threadId, entities) => manager.createEntities(threadId, entities),
+        (threadId, relations) => manager.createRelations(threadId, relations)
       );
 
       expect(result.success).toBe(false);
@@ -587,8 +587,8 @@ describe('Save Memory Handler - Integration Tests', () => {
 
       const result = await handleSaveMemory(
         input,
-        (entities) => manager.createEntities(entities),
-        (relations) => manager.createRelations(relations)
+        (threadId, entities) => manager.createEntities(threadId, entities),
+        (threadId, relations) => manager.createRelations(threadId, relations)
       );
 
       expect(result.success).toBe(false);
@@ -623,8 +623,8 @@ describe('Save Memory Handler - Integration Tests', () => {
 
       const result = await handleSaveMemory(
         input,
-        (entities) => manager.createEntities(entities),
-        (relations) => manager.createRelations(relations)
+        (threadId, entities) => manager.createEntities(threadId, entities),
+        (threadId, relations) => manager.createRelations(threadId, relations)
       );
 
       expect(result.success).toBe(true);
@@ -655,8 +655,8 @@ describe('Save Memory Handler - Integration Tests', () => {
 
       const result = await handleSaveMemory(
         input,
-        (entities) => manager.createEntities(entities),
-        (relations) => manager.createRelations(relations)
+        (threadId, entities) => manager.createEntities(threadId, entities),
+        (threadId, relations) => manager.createRelations(threadId, relations)
       );
 
       expect(result.success).toBe(false);

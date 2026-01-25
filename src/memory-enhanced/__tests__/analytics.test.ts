@@ -43,8 +43,8 @@ describe('Analytics - getAnalytics', () => {
 
     const relation = new RelationBuilder('Entity1', 'Entity2', 'relates to').build();
 
-    await manager.createEntities([entity1, entity2]);
-    await manager.createRelations([relation]);
+    await manager.createEntities('test-thread', [entity1, entity2]);
+    await manager.createRelations('test-thread', [relation]);
 
     const analytics = await manager.getAnalytics('test-thread');
 
@@ -88,7 +88,7 @@ describe('Analytics - getAnalytics', () => {
       }
     ];
 
-    await manager.createEntities(entities);
+    await manager.createEntities('test-thread', entities);
 
     const analytics = await manager.getAnalytics('test-thread');
 
@@ -153,8 +153,8 @@ describe('Analytics - getAnalytics', () => {
       { from: 'Hub', to: 'Spoke2', relationType: 'connects to', agentThreadId: 'test-thread', timestamp: '2026-01-01T10:00:00Z', confidence: 1.0, importance: 1.0 }
     ];
 
-    await manager.createEntities(entities);
-    await manager.createRelations(relations);
+    await manager.createEntities('test-thread', entities);
+    await manager.createRelations('test-thread', relations);
 
     const analytics = await manager.getAnalytics('test-thread');
 
@@ -182,7 +182,7 @@ describe('Analytics - getAnalytics', () => {
       }
     ];
 
-    await manager.createEntities(entities);
+    await manager.createEntities('test-thread', entities);
 
     const analytics = await manager.getAnalytics('test-thread');
 
@@ -249,8 +249,8 @@ describe('Analytics - getAnalytics', () => {
       }
     ];
 
-    await manager.createEntities(entities);
-    await manager.createRelations(relations);
+    await manager.createEntities('test-thread', entities);
+    await manager.createRelations('test-thread', relations);
 
     const analytics = await manager.getAnalytics('test-thread');
 
@@ -305,8 +305,8 @@ describe('Analytics - getAnalytics', () => {
       }
     ];
 
-    await manager.createEntities(entities1);
-    await manager.createEntities(entities2);
+    await manager.createEntities('thread-1', entities1);
+    await manager.createEntities('thread-2', entities2);
 
     const analytics1 = await manager.getAnalytics('thread-1');
     const analytics2 = await manager.getAnalytics('thread-2');
@@ -338,7 +338,7 @@ describe('Analytics - getAnalytics', () => {
       });
     }
 
-    await manager.createEntities(entities);
+    await manager.createEntities('test-thread', entities);
 
     const analytics = await manager.getAnalytics('test-thread');
 

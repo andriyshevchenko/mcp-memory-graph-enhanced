@@ -85,7 +85,7 @@ describe('Storage Abstraction', () => {
     it('should create and read entities using JSONL storage', async () => {
       const entity = createEntityWithObservation('TestEntity', 'test observation');
       
-      await manager.createEntities([entity]);
+      await manager.createEntities('thread-001', [entity]);
       const graph = await manager.readGraph('thread-001');
       
       expect(graph.entities).toHaveLength(1);
@@ -104,7 +104,7 @@ describe('Storage Abstraction', () => {
     it('should create and read entities', async () => {
       const entity = createEntityWithObservation('TestEntity', 'test observation');
       
-      await manager.createEntities([entity]);
+      await manager.createEntities('thread-001', [entity]);
       const graph = await manager.readGraph('thread-001');
       
       expect(graph.entities).toHaveLength(1);
@@ -116,8 +116,8 @@ describe('Storage Abstraction', () => {
       const bob = createPersonEntity('Bob');
       const relation = createTestRelation('Alice', 'Bob');
 
-      await manager.createEntities([alice, bob]);
-      await manager.createRelations([relation]);
+      await manager.createEntities('thread-001', [alice, bob]);
+      await manager.createRelations('thread-001', [relation]);
       
       const graph = await manager.readGraph('thread-001');
       
@@ -131,11 +131,11 @@ describe('Storage Abstraction', () => {
       const entity1 = createTestEntity('Entity1');
       const entity2 = createTestEntity('Entity2');
 
-      await manager.createEntities([entity1]);
+      await manager.createEntities('thread-001', [entity1]);
       const graph1 = await manager.readGraph('thread-001');
       expect(graph1.entities).toHaveLength(1);
 
-      await manager.createEntities([entity2]);
+      await manager.createEntities('thread-001', [entity2]);
       const graph2 = await manager.readGraph('thread-001');
       expect(graph2.entities).toHaveLength(2);
     });
