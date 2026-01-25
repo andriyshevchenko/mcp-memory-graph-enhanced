@@ -153,10 +153,10 @@ export const ValidateMemoryOutputSchema = z.object({
 
 // Schema for update_observation tool
 export const UpdateObservationInputSchema = z.object({
+  agentThreadId: z.string().min(1).describe("Agent thread ID making this update"),
   entityName: z.string().min(1).describe("Name of the entity containing the observation"),
   observationId: z.string().min(1).describe("ID of the observation to update"),
   newContent: z.string().min(1).max(300).describe("New content for the observation (max 300 chars). Minimum 1 character to allow short but valid observations like abbreviations or single words."),
-  agentThreadId: z.string().min(1).describe("Agent thread ID making this update"),
   timestamp: z.string().describe("ISO 8601 timestamp of the update"),
   confidence: z.number().min(0).max(1).optional().describe("Optional confidence score (0-1), inherits from old observation if not provided"),
   importance: z.number().min(0).max(1).optional().describe("Optional importance score (0-1), inherits from old observation if not provided")
