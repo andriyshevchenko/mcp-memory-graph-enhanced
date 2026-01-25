@@ -111,7 +111,8 @@ export const GetAnalyticsOutputSchema = z.object({
 // Schema for get_observation_history tool (Observation Versioning section of spec)
 export const GetObservationHistoryInputSchema = z.object({
   entityName: z.string().min(1).describe("Name of the entity"),
-  observationId: z.string().min(1).describe("ID of the observation to retrieve history for")
+  observationId: z.string().min(1).describe("ID of the observation to retrieve history for"),
+  threadId: z.string().min(1).describe("Thread ID for this conversation/project")
 });
 
 export const GetObservationHistoryOutputSchema = z.object({
@@ -165,4 +166,60 @@ export const UpdateObservationOutputSchema = z.object({
   success: z.boolean(),
   updatedObservation: ObservationSchema.describe("The new version of the observation"),
   message: z.string()
+});
+
+// Schemas for read tools that need thread isolation
+
+export const ReadGraphInputSchema = z.object({
+  threadId: z.string().min(1).describe("Thread ID for this conversation/project")
+});
+
+export const SearchNodesInputSchema = z.object({
+  query: z.string().describe("The search query to match against entity names, types, and observation content"),
+  threadId: z.string().min(1).describe("Thread ID for this conversation/project")
+});
+
+export const OpenNodesInputSchema = z.object({
+  names: z.array(z.string()).describe("An array of entity names to retrieve"),
+  threadId: z.string().min(1).describe("Thread ID for this conversation/project")
+});
+
+export const QueryNodesInputSchema = z.object({
+  threadId: z.string().min(1).describe("Thread ID for this conversation/project"),
+  timestampStart: z.string().optional().describe("ISO 8601 timestamp - filter for items created on or after this time"),
+  timestampEnd: z.string().optional().describe("ISO 8601 timestamp - filter for items created on or before this time"),
+  confidenceMin: z.number().min(0).max(1).optional().describe("Minimum confidence value (0-1)"),
+  confidenceMax: z.number().min(0).max(1).optional().describe("Maximum confidence value (0-1)"),
+  importanceMin: z.number().min(0).max(1).optional().describe("Minimum importance value (0-1)"),
+  importanceMax: z.number().min(0).max(1).optional().describe("Maximum importance value (0-1)")
+});
+
+export const GetMemoryStatsInputSchema = z.object({
+  threadId: z.string().min(1).describe("Thread ID for this conversation/project")
+});
+
+export const GetRecentChangesInputSchema = z.object({
+  since: z.string().describe("ISO 8601 timestamp - return changes since this time"),
+  threadId: z.string().min(1).describe("Thread ID for this conversation/project")
+});
+
+export const FindRelationPathInputSchema = z.object({
+  from: z.string().describe("Starting entity name"),
+  to: z.string().describe("Target entity name"),
+  maxDepth: z.number().optional().default(5).describe("Maximum path depth to search (default: 5)"),
+  threadId: z.string().min(1).describe("Thread ID for this conversation/project")
+});
+
+export const DetectConflictsInputSchema = z.object({
+  threadId: z.string().min(1).describe("Thread ID for this conversation/project")
+});
+
+export const GetFlaggedEntitiesInputSchema = z.object({
+  threadId: z.string().min(1).describe("Thread ID for this conversation/project")
+});
+
+export const GetContextInputSchema = z.object({
+  entityNames: z.array(z.string()).describe("Names of entities to get context for"),
+  depth: z.number().optional().default(1).describe("How many relationship hops to include (default: 1)"),
+  threadId: z.string().min(1).describe("Thread ID for this conversation/project")
 });

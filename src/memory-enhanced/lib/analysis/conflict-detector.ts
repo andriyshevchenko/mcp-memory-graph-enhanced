@@ -8,15 +8,20 @@ import { hasNegation, NEGATION_WORDS } from '../utils/negation-detector.js';
 /**
  * Detect conflicting observations within entities
  * Identifies potential contradictions by checking for negation patterns
+ * Filtered to specific thread
  */
-export async function detectConflicts(storage: IStorageAdapter): Promise<{
+export async function detectConflicts(storage: IStorageAdapter, threadId: string): Promise<{
   entityName: string;
   conflicts: { obs1: string; obs2: string; reason: string }[];
 }[]> {
   const graph = await storage.loadGraph();
+  
+  // Filter entities to specific thread
+  const threadEntities = graph.entities.filter(e => e.agentThreadId === threadId);
+  
   const conflicts: { entityName: string; conflicts: { obs1: string; obs2: string; reason: string }[] }[] = [];
   
-  for (const entity of graph.entities) {
+  for (const entity of threadEntities) {
     const entityConflicts: { obs1: string; obs2: string; reason: string }[] = [];
     
     for (let i = 0; i < entity.observations.length; i++) {

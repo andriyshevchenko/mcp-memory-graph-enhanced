@@ -109,23 +109,23 @@ export class KnowledgeGraphManager {
   }
 
   // Graph Reading Operations
-  async readGraph(): Promise<KnowledgeGraph> {
+  async readGraph(threadId: string): Promise<KnowledgeGraph> {
     await this.ensureInitialized();
-    return GraphReader.readGraph(this.storage);
+    return GraphReader.readGraph(this.storage, threadId);
   }
 
   // Search Operations
-  async searchNodes(query: string): Promise<KnowledgeGraph> {
+  async searchNodes(query: string, threadId: string): Promise<KnowledgeGraph> {
     await this.ensureInitialized();
-    return SearchService.searchNodes(this.storage, query);
+    return SearchService.searchNodes(this.storage, query, threadId);
   }
 
-  async openNodes(names: string[]): Promise<KnowledgeGraph> {
+  async openNodes(names: string[], threadId: string): Promise<KnowledgeGraph> {
     await this.ensureInitialized();
-    return SearchService.openNodes(this.storage, names);
+    return SearchService.openNodes(this.storage, names, threadId);
   }
 
-  async queryNodes(filters?: {
+  async queryNodes(threadId: string, filters?: {
     timestampStart?: string;
     timestampEnd?: string;
     confidenceMin?: number;
@@ -134,7 +134,7 @@ export class KnowledgeGraphManager {
     importanceMax?: number;
   }): Promise<KnowledgeGraph> {
     await this.ensureInitialized();
-    return SearchService.queryNodes(this.storage, filters);
+    return SearchService.queryNodes(this.storage, threadId, filters);
   }
 
   // Entity Query Operations
@@ -158,7 +158,7 @@ export class KnowledgeGraphManager {
   }
 
   // Memory Statistics & Insights
-  async getMemoryStats(): Promise<{
+  async getMemoryStats(threadId: string): Promise<{
     entityCount: number;
     relationCount: number;
     threadCount: number;
@@ -168,35 +168,35 @@ export class KnowledgeGraphManager {
     recentActivity: { timestamp: string; entityCount: number }[];
   }> {
     await this.ensureInitialized();
-    return MemoryStats.getMemoryStats(this.storage);
+    return MemoryStats.getMemoryStats(this.storage, threadId);
   }
 
-  async getRecentChanges(since: string): Promise<KnowledgeGraph> {
+  async getRecentChanges(since: string, threadId: string): Promise<KnowledgeGraph> {
     await this.ensureInitialized();
-    return MemoryStats.getRecentChanges(this.storage, since);
+    return MemoryStats.getRecentChanges(this.storage, since, threadId);
   }
 
   // Analysis Operations
-  async findRelationPath(from: string, to: string, maxDepth: number = 5): Promise<{
+  async findRelationPath(from: string, to: string, maxDepth: number, threadId: string): Promise<{
     found: boolean;
     path: string[];
     relations: Relation[];
   }> {
     await this.ensureInitialized();
-    return PathFinder.findRelationPath(this.storage, from, to, maxDepth);
+    return PathFinder.findRelationPath(this.storage, from, to, maxDepth, threadId);
   }
 
-  async detectConflicts(): Promise<{
+  async detectConflicts(threadId: string): Promise<{
     entityName: string;
     conflicts: { obs1: string; obs2: string; reason: string }[];
   }[]> {
     await this.ensureInitialized();
-    return ConflictDetector.detectConflicts(this.storage);
+    return ConflictDetector.detectConflicts(this.storage, threadId);
   }
 
-  async getContext(entityNames: string[], depth: number = 1): Promise<KnowledgeGraph> {
+  async getContext(entityNames: string[], depth: number, threadId: string): Promise<KnowledgeGraph> {
     await this.ensureInitialized();
-    return ContextBuilder.getContext(this.storage, entityNames, depth);
+    return ContextBuilder.getContext(this.storage, entityNames, depth, threadId);
   }
 
   async getAnalytics(threadId: string): Promise<{
@@ -254,9 +254,9 @@ export class KnowledgeGraphManager {
     return FlagManager.flagForReview(this.storage, entityName, reason, reviewer);
   }
 
-  async getFlaggedEntities(): Promise<Entity[]> {
+  async getFlaggedEntities(threadId: string): Promise<Entity[]> {
     await this.ensureInitialized();
-    return FlagManager.getFlaggedEntities(this.storage);
+    return FlagManager.getFlaggedEntities(this.storage, threadId);
   }
 
   async listConversations(): Promise<{
@@ -273,8 +273,8 @@ export class KnowledgeGraphManager {
   }
 
   // Observation Versioning
-  async getObservationHistory(entityName: string, observationId: string): Promise<Observation[]> {
+  async getObservationHistory(entityName: string, observationId: string, threadId: string): Promise<Observation[]> {
     await this.ensureInitialized();
-    return ObservationHistory.getObservationHistory(this.storage, entityName, observationId);
+    return ObservationHistory.getObservationHistory(this.storage, entityName, observationId, threadId);
   }
 }

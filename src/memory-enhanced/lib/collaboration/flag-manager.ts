@@ -45,10 +45,12 @@ export async function flagForReview(
 
 /**
  * Get all entities flagged for review
+ * Filtered to specific thread
  */
-export async function getFlaggedEntities(storage: IStorageAdapter): Promise<Entity[]> {
+export async function getFlaggedEntities(storage: IStorageAdapter, threadId: string): Promise<Entity[]> {
   const graph = await storage.loadGraph();
   return graph.entities.filter(e => 
+    e.agentThreadId === threadId &&
     e.observations.some(obs => obs.content.includes('[FLAGGED FOR REVIEW:'))
   );
 }

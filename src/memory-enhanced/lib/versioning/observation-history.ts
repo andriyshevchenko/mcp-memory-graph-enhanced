@@ -9,16 +9,22 @@ import { findEntity, findObservation } from '../utils/entity-finder.js';
 /**
  * Get full history chain for an observation
  * Traces backwards and forwards through the version chain
+ * Filtered to specific thread
  */
 export async function getObservationHistory(
   storage: IStorageAdapter,
   entityName: string,
-  observationId: string
+  observationId: string,
+  threadId: string
 ): Promise<Observation[]> {
   const graph = await storage.loadGraph();
   
+  // Filter graph to specific thread first
+  const threadEntities = graph.entities.filter(e => e.agentThreadId === threadId);
+  const threadGraph = { entities: threadEntities, relations: [] };
+  
   // Find the entity
-  const entity = findEntity(graph, entityName);
+  const entity = findEntity(threadGraph, entityName);
   
   // Find the starting observation
   const startObs = findObservation(entity, observationId);
