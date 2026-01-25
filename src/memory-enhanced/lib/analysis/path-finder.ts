@@ -8,9 +8,11 @@ import { IStorageAdapter } from '../storage-interface.js';
 /**
  * Find the shortest path between two entities in the knowledge graph
  * Uses BFS algorithm with bidirectional search
+ * Filtered by threadId for thread isolation
  */
 export async function findRelationPath(
   storage: IStorageAdapter,
+  threadId: string,
   from: string,
   to: string,
   maxDepth: number = 5
@@ -25,10 +27,10 @@ export async function findRelationPath(
     return { found: true, path: [from], relations: [] };
   }
   
-  // Build indexes for efficient relation lookup
+  // Build indexes for efficient relation lookup - only for relations in this thread
   const relationsFrom = new Map<string, Relation[]>();
   const relationsTo = new Map<string, Relation[]>();
-  for (const rel of graph.relations) {
+  for (const rel of graph.relations.filter(r => r.agentThreadId === threadId)) {
     if (!relationsFrom.has(rel.from)) {
       relationsFrom.set(rel.from, []);
     }

@@ -8,25 +8,29 @@ import { IStorageAdapter } from '../storage-interface.js';
 /**
  * Search for nodes in the knowledge graph by query string
  * Searches entity names, types, and observation content
+ * Filtered by threadId for thread isolation
  */
 export async function searchNodes(
   storage: IStorageAdapter,
-  query: string
+  query: string,
+  threadId: string
 ): Promise<KnowledgeGraph> {
   const graph = await storage.loadGraph();
   
-  // Filter entities
+  // Filter entities by threadId first, then by search query
   const filteredEntities = graph.entities.filter(e => 
-    e.name.toLowerCase().includes(query.toLowerCase()) ||
+    e.agentThreadId === threadId &&
+    (e.name.toLowerCase().includes(query.toLowerCase()) ||
     e.entityType.toLowerCase().includes(query.toLowerCase()) ||
-    e.observations.some(o => o.content?.toLowerCase().includes(query.toLowerCase()))
+    e.observations.some(o => o.content?.toLowerCase().includes(query.toLowerCase())))
   );
 
   // Create a Set of filtered entity names for quick lookup
   const filteredEntityNames = new Set(filteredEntities.map(e => e.name));
 
-  // Filter relations to only include those between filtered entities
+  // Filter relations to only include those between filtered entities and from the same thread
   const filteredRelations = graph.relations.filter(r => 
+    r.agentThreadId === threadId &&
     filteredEntityNames.has(r.from) && filteredEntityNames.has(r.to)
   );
 
@@ -41,21 +45,26 @@ export async function searchNodes(
 /**
  * Open specific nodes by name
  * Returns a subgraph containing only the specified entities and relations between them
+ * Filtered by threadId for thread isolation
  */
 export async function openNodes(
   storage: IStorageAdapter,
-  names: string[]
+  names: string[],
+  threadId: string
 ): Promise<KnowledgeGraph> {
   const graph = await storage.loadGraph();
   
-  // Filter entities
-  const filteredEntities = graph.entities.filter(e => names.includes(e.name));
+  // Filter entities by threadId first, then by name
+  const filteredEntities = graph.entities.filter(e => 
+    e.agentThreadId === threadId && names.includes(e.name)
+  );
 
   // Create a Set of filtered entity names for quick lookup
   const filteredEntityNames = new Set(filteredEntities.map(e => e.name));
 
-  // Filter relations to only include those between filtered entities
+  // Filter relations to only include those between filtered entities and from the same thread
   const filteredRelations = graph.relations.filter(r => 
+    r.agentThreadId === threadId &&
     filteredEntityNames.has(r.from) && filteredEntityNames.has(r.to)
   );
 
@@ -70,9 +79,11 @@ export async function openNodes(
 /**
  * Query nodes with advanced filters
  * Supports filtering by timestamp range, confidence range, and importance range
+ * Filtered by threadId for thread isolation
  */
 export async function queryNodes(
   storage: IStorageAdapter,
+  threadId: string,
   filters?: {
     timestampStart?: string;
     timestampEnd?: string;
@@ -84,13 +95,16 @@ export async function queryNodes(
 ): Promise<KnowledgeGraph> {
   const graph = await storage.loadGraph();
   
-  // If no filters provided, return entire graph
-  if (!filters) {
-    return graph;
-  }
-  
-  // Apply filters to entities
+  // Apply filters to entities, starting with threadId filter
   const filteredEntities = graph.entities.filter(e => {
+    // Thread isolation filter - must match
+    if (e.agentThreadId !== threadId) return false;
+    // Thread isolation filter - must match
+    if (e.agentThreadId !== threadId) return false;
+    
+    // Optional filters below
+    if (!filters) return true;
+    
     // Timestamp range filter
     if (filters.timestampStart && e.timestamp < filters.timestampStart) return false;
     if (filters.timestampEnd && e.timestamp > filters.timestampEnd) return false;
@@ -111,8 +125,14 @@ export async function queryNodes(
 
   // Apply filters to relations (and ensure they connect filtered entities)
   const filteredRelations = graph.relations.filter(r => {
+    // Thread isolation filter - must match
+    if (r.agentThreadId !== threadId) return false;
+    
     // Must connect filtered entities
     if (!filteredEntityNames.has(r.from) || !filteredEntityNames.has(r.to)) return false;
+    
+    // Optional filters below
+    if (!filters) return true;
     
     // Timestamp range filter
     if (filters.timestampStart && r.timestamp < filters.timestampStart) return false;

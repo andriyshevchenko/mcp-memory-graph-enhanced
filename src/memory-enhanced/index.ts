@@ -24,7 +24,17 @@ import {
   ValidateMemoryInputSchema,
   ValidateMemoryOutputSchema,
   UpdateObservationInputSchema,
-  UpdateObservationOutputSchema
+  UpdateObservationOutputSchema,
+  ReadGraphInputSchema,
+  SearchNodesInputSchema,
+  OpenNodesInputSchema,
+  QueryNodesInputSchema,
+  GetMemoryStatsInputSchema,
+  GetRecentChangesInputSchema,
+  FindRelationPathInputSchema,
+  DetectConflictsInputSchema,
+  GetFlaggedEntitiesInputSchema,
+  GetContextInputSchema
 } from './lib/schemas.js';
 import { handleSaveMemory } from './lib/save-memory-handler.js';
 import { validateSaveMemoryRequest } from './lib/validation.js';
