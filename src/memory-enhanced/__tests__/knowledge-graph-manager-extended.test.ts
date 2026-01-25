@@ -26,7 +26,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
 
   describe('getMemoryStats', () => {
     it('should return correct stats for empty graph', async () => {
-      const stats = await manager.getMemoryStats();
+      const stats = await manager.getMemoryStats('thread1');
       
       expect(stats.entityCount).toBe(0);
       expect(stats.relationCount).toBe(0);
@@ -82,7 +82,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
       ]);
 
       // Act
-      const stats = await manager.getMemoryStats();
+      const stats = await manager.getMemoryStats('thread1');
 
       // Assert
       expect(stats.entityCount).toBe(2);
@@ -115,7 +115,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
       ]);
 
       // Act
-      const changes = await manager.getRecentChanges(new Date('2021-01-01').toISOString());
+      const changes = await manager.getRecentChanges(new Date('2021-01-01').toISOString(), 'thread1');
 
       // Assert - old entity should not be included
       expect(changes.entities).toHaveLength(0);
@@ -170,7 +170,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
       ]);
 
       // Act
-      const changes = await manager.getRecentChanges(new Date(Date.now() - 60000).toISOString());
+      const changes = await manager.getRecentChanges(new Date(Date.now() - 60000).toISOString(), 'thread1');
 
       // Assert
       expect(changes.entities.length).toBeGreaterThan(0);
@@ -213,7 +213,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
         }
       ]);
 
-      const result = await manager.findRelationPath('Isolated1', 'Isolated2');
+      const result = await manager.findRelationPath('Isolated1', 'Isolated2', 10, 'thread1');
 
       expect(result.found).toBe(false);
       expect(result.path).toEqual([]);
@@ -265,7 +265,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
         }
       ]);
 
-      const result = await manager.findRelationPath('Start', 'End');
+      const result = await manager.findRelationPath('Start', 'End', 10, 'thread1');
 
       expect(result.found).toBe(true);
       expect(result.path).toContain('Start');
@@ -323,7 +323,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
       ]);
 
       // With maxDepth=2, should not find path from A to D (requires 3 hops)
-      const result = await manager.findRelationPath('A', 'D', 2);
+      const result = await manager.findRelationPath('A', 'D', 2, 'thread1');
 
       expect(result.found).toBe(false);
     });
@@ -358,7 +358,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
         }
       ]);
 
-      const result = await manager.detectConflicts();
+      const result = await manager.detectConflicts('thread1');
 
       expect(result).toHaveLength(0);
     });
@@ -391,7 +391,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
         }
       ]);
 
-      const result = await manager.detectConflicts();
+      const result = await manager.detectConflicts('thread1');
 
       // The conflict detection uses word overlap and negation detection
       // If it doesn't detect this specific case, that's okay - test the actual behavior
@@ -501,7 +501,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
       });
 
       // Since we have 2 entities above threshold and keepMinEntities=10, keep them
-      const graph = await manager.readGraph();
+      const graph = await manager.readGraph('thread1');
       expect(graph.entities.length).toBe(2);
       expect(result.removedEntities).toBe(0);
     });
@@ -550,7 +550,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
       expect(result.updated).toBe(2);
       expect(result.notFound).toHaveLength(0);
 
-      const graph = await manager.readGraph();
+      const graph = await manager.readGraph('thread1');
       const entity1 = graph.entities.find(e => e.name === 'Entity1');
       const entity2 = graph.entities.find(e => e.name === 'Entity2');
 
@@ -595,7 +595,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
 
       expect(result.updated).toBe(1);
 
-      const graph = await manager.readGraph();
+      const graph = await manager.readGraph('thread1');
       const entity = graph.entities.find(e => e.name === 'Entity1');
       expect(entity?.observations.length).toBeGreaterThan(1);
     });
@@ -623,7 +623,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
 
       await manager.flagForReview('FlaggedEntity', 'Needs verification');
 
-      const flaggedEntities = await manager.getFlaggedEntities();
+      const flaggedEntities = await manager.getFlaggedEntities('thread1');
       expect(flaggedEntities.length).toBeGreaterThan(0);
       expect(flaggedEntities[0].name).toBe('FlaggedEntity');
     });
@@ -649,7 +649,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
 
       await manager.flagForReview('ReviewEntity', 'Check accuracy', 'Reviewer1');
 
-      const flaggedEntities = await manager.getFlaggedEntities();
+      const flaggedEntities = await manager.getFlaggedEntities('thread1');
       expect(flaggedEntities.length).toBeGreaterThan(0);
     });
 
@@ -680,7 +680,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
         }
       ]);
 
-      const flaggedEntities = await manager.getFlaggedEntities();
+      const flaggedEntities = await manager.getFlaggedEntities('thread1');
       expect(flaggedEntities).toHaveLength(0);
     });
   });
@@ -757,7 +757,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
         }
       ]);
 
-      const context = await manager.getContext(['A'], 1);
+      const context = await manager.getContext(['A'], 1, 'thread1');
 
       expect(context.entities.length).toBeGreaterThan(0);
       expect(context.entities.some(e => e.name === 'A')).toBe(true);
@@ -782,7 +782,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
         }
       ]);
 
-      const context = await manager.getContext(['Central'], 2);
+      const context = await manager.getContext(['Central'], 2, 'thread1');
 
       // Should at least return the central entity
       expect(context.entities.some(e => e.name === 'Central')).toBe(true);
@@ -839,7 +839,7 @@ describe('KnowledgeGraphManager - Extended Coverage', () => {
       ]);
 
       // Get context with depth 2 from A should include A, B, and C
-      const context = await manager.getContext(['ContextA'], 2);
+      const context = await manager.getContext(['ContextA'], 2, 'thread1');
 
       expect(context.entities.some(e => e.name === 'ContextA')).toBe(true);
       expect(context.entities.some(e => e.name === 'ContextB')).toBe(true);

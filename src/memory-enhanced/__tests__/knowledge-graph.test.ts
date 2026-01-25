@@ -56,7 +56,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
       expect(newEntities).toHaveLength(2);
       expect(newEntities).toEqual(entities);
 
-      const graph = await manager.readGraph();
+      const graph = await manager.readGraph('thread-001');
       expect(graph.entities).toHaveLength(2);
       expect(graph.entities[0].agentThreadId).toBe('thread-001');
       expect(graph.entities[0].timestamp).toBe('2024-01-20T10:00:00Z');
@@ -81,7 +81,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
 
       expect(newEntities).toHaveLength(0);
 
-      const graph = await manager.readGraph();
+      const graph = await manager.readGraph('thread-001');
       expect(graph.entities).toHaveLength(1);
     });
 
@@ -130,7 +130,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
       expect(newRelations).toHaveLength(1);
       expect(newRelations).toEqual(relations);
 
-      const graph = await manager.readGraph();
+      const graph = await manager.readGraph('thread-001');
       expect(graph.relations).toHaveLength(1);
       expect(graph.relations[0].agentThreadId).toBe('thread-001');
       expect(graph.relations[0].timestamp).toBe('2024-01-20T10:01:00Z');
@@ -176,7 +176,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
 
       expect(newRelations).toHaveLength(0);
 
-      const graph = await manager.readGraph();
+      const graph = await manager.readGraph('thread-001');
       expect(graph.relations).toHaveLength(1);
     });
   });
@@ -217,9 +217,14 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
       expect(threadFiles).toContain('thread-thread-001.jsonl');
       expect(threadFiles).toContain('thread-thread-002.jsonl');
 
-      // Verify we can read all entities
-      const graph = await manager.readGraph();
-      expect(graph.entities).toHaveLength(2);
+      // Verify we can read entities from each thread separately
+      const graph1 = await manager.readGraph('thread-001');
+      expect(graph1.entities).toHaveLength(1);
+      expect(graph1.entities[0].name).toBe('Alice');
+      
+      const graph2 = await manager.readGraph('thread-002');
+      expect(graph2.entities).toHaveLength(1);
+      expect(graph2.entities[0].name).toBe('Bob');
     });
 
     it('should store relations from different threads in separate files', async () => {
@@ -280,9 +285,16 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
       await manager.createRelations(relationsThread1);
       await manager.createRelations(relationsThread2);
 
-      // Verify all relations are readable
-      const graph = await manager.readGraph();
-      expect(graph.relations).toHaveLength(2);
+      // Verify relations are readable from each thread separately
+      const graph1 = await manager.readGraph('thread-001');
+      expect(graph1.relations).toHaveLength(1);
+      expect(graph1.relations[0].from).toBe('Alice');
+      expect(graph1.relations[0].to).toBe('Bob');
+      
+      const graph2 = await manager.readGraph('thread-002');
+      expect(graph2.relations).toHaveLength(1);
+      expect(graph2.relations[0].from).toBe('Alice');
+      expect(graph2.relations[0].to).toBe('Charlie');
     });
   });
 
@@ -323,7 +335,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
       expect(result).toHaveLength(1);
       expect(result[0].addedObservations).toHaveLength(2);
 
-      const graph = await manager.readGraph();
+      const graph = await manager.readGraph('thread-001');
       const alice = graph.entities.find(e => e.name === 'Alice');
       expect(alice?.observations).toHaveLength(3);
       expect(alice?.timestamp).toBe('2024-01-20T10:05:00Z');
@@ -421,7 +433,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
 
       await manager.deleteEntities(['Alice']);
 
-      const graph = await manager.readGraph();
+      const graph = await manager.readGraph('thread-001');
       expect(graph.entities).toHaveLength(1);
       expect(graph.entities[0].name).toBe('Bob');
       expect(graph.relations).toHaveLength(0);
@@ -484,7 +496,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
         },
       ]);
 
-      const result = await manager.searchNodes('programming');
+      const result = await manager.searchNodes('programming', 'thread-001');
       expect(result.entities).toHaveLength(1);
       expect(result.entities[0].name).toBe('Bob');
     });
@@ -513,7 +525,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
         },
       ]);
 
-      const result = await manager.openNodes(['Alice']);
+      const result = await manager.openNodes(['Alice'], 'thread-001');
       expect(result.entities).toHaveLength(1);
       expect(result.entities[0].name).toBe('Alice');
     });
@@ -575,7 +587,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
     });
 
     it('should filter by timestamp range', async () => {
-      const result = await manager.queryNodes({
+      const result = await manager.queryNodes('thread-001', {
         timestampStart: '2024-01-20T11:30:00Z',
         timestampEnd: '2024-01-20T13:30:00Z'
       });
@@ -589,7 +601,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
     });
 
     it('should filter by confidence range', async () => {
-      const result = await manager.queryNodes({
+      const result = await manager.queryNodes('thread-001', {
         confidenceMin: 0.8,
         confidenceMax: 1.0
       });
@@ -604,7 +616,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
     });
 
     it('should filter by importance range', async () => {
-      const result = await manager.queryNodes({
+      const result = await manager.queryNodes('thread-001', {
         importanceMin: 0.6,
         importanceMax: 1.0
       });
@@ -619,7 +631,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
     });
 
     it('should filter by multiple range criteria', async () => {
-      const result = await manager.queryNodes({
+      const result = await manager.queryNodes('thread-001', {
         confidenceMin: 0.8,
         importanceMin: 0.8
       });
@@ -633,7 +645,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
     });
 
     it('should include relations when both entities pass filter', async () => {
-      const result = await manager.queryNodes({
+      const result = await manager.queryNodes('thread-001', {
         importanceMin: 0.4,
         importanceMax: 0.9
       });
@@ -649,14 +661,14 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
     });
 
     it('should return all data when no filters provided', async () => {
-      const result = await manager.queryNodes();
+      const result = await manager.queryNodes('thread-001');
       
       expect(result.entities).toHaveLength(3);
       expect(result.relations).toHaveLength(2);
     });
 
     it('should return empty result when no data matches filters', async () => {
-      const result = await manager.queryNodes({
+      const result = await manager.queryNodes('thread-001', {
         importanceMin: 0.95
       });
       
@@ -693,7 +705,7 @@ describe('KnowledgeGraphManager - Enhanced with Metadata', () => {
       ]);
 
       // Verify only one Alice entity exists
-      const graph = await manager.readGraph();
+      const graph = await manager.readGraph('thread-001');
       expect(graph.entities).toHaveLength(1);
       expect(graph.entities[0].name).toBe('Alice');
       expect(graph.entities[0].observations).toHaveLength(3);

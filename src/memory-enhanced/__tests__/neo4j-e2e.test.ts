@@ -65,7 +65,7 @@ describe('Neo4j Storage Adapter E2E', () => {
       
       // Act
       await manager.createEntities([entity]);
-      const graph = await manager.readGraph();
+      const graph = await manager.readGraph('thread-001');
       
       // Assert
       expect(graph.entities).toHaveLength(1);
@@ -96,7 +96,7 @@ describe('Neo4j Storage Adapter E2E', () => {
       
       // Act
       await manager.createEntities([entity]);
-      const graph = await manager.readGraph();
+      const graph = await manager.readGraph('test-thread');
       
       // Assert
       expect(graph.entities).toHaveLength(1);
@@ -116,7 +116,7 @@ describe('Neo4j Storage Adapter E2E', () => {
       
       // Act
       await manager.deleteEntities(['Entity1']);
-      const graph = await manager.readGraph();
+      const graph = await manager.readGraph('thread-001');
       
       // Assert
       expect(graph.entities).toHaveLength(1);
@@ -137,7 +137,7 @@ describe('Neo4j Storage Adapter E2E', () => {
       // Act
       await manager.createEntities([entity1, entity2]);
       await manager.createRelations([relation]);
-      const graph = await manager.readGraph();
+      const graph = await manager.readGraph('thread-001');
       
       // Assert
       expect(graph.entities).toHaveLength(2);
@@ -154,7 +154,7 @@ describe('Neo4j Storage Adapter E2E', () => {
       // Arrange & Act - First operation
       const entity1 = createTestEntity('Alice');
       await manager.createEntities([entity1]);
-      let graph = await manager.readGraph();
+      let graph = await manager.readGraph('thread-001');
       
       // Assert - First operation
       expect(graph.entities).toHaveLength(1);
@@ -164,7 +164,7 @@ describe('Neo4j Storage Adapter E2E', () => {
       await manager.createEntities([entity2]);
       const relation = createTestRelation('Alice', 'Bob');
       await manager.createRelations([relation]);
-      graph = await manager.readGraph();
+      graph = await manager.readGraph('thread-001');
       
       // Assert - Second operation
       expect(graph.entities).toHaveLength(2);
@@ -185,7 +185,7 @@ describe('Neo4j Storage Adapter E2E', () => {
       
       // Act
       await manager.createEntities(entities);
-      const graph = await manager.readGraph();
+      const graph = await manager.readGraph('thread-001');
       
       // Assert
       expect(graph.entities).toHaveLength(entityCount);
@@ -204,7 +204,7 @@ describe('Neo4j Storage Adapter E2E', () => {
         promises.push(manager.createEntities([entity]));
       }
       await Promise.all(promises);
-      const graph = await manager.readGraph();
+      const graph = await manager.readGraph('thread-001');
       
       // Assert - verify all entities were created
       expect(graph.entities.length).toBeGreaterThanOrEqual(entityCount);
@@ -254,7 +254,7 @@ describe('Neo4j Storage Adapter E2E', () => {
       
       // Act
       await manager.createEntities([entity1, entity2]);
-      const result = await manager.searchNodes('Google');
+      const result = await manager.searchNodes('Google', 'test-thread');
       
       // Assert
       expect(result.entities.length).toBeGreaterThan(0);
@@ -316,7 +316,7 @@ describe('Neo4j Storage Adapter E2E', () => {
       // Act
       await manager.createEntities([entity1, entity2]);
       await manager.createRelations([relation]);
-      const graph = await manager.readGraph();
+      const graph = await manager.readGraph('test-thread');
 
       // Assert
       expect(graph.entities).toHaveLength(2);

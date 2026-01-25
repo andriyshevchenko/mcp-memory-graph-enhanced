@@ -182,7 +182,7 @@ describe('Save Memory Handler - Integration Tests', () => {
     expect(result.success).toBe(true);
     
     // Verify defaults were applied
-    const graph = await manager.readGraph();
+    const graph = await manager.readGraph('test-thread-005');
     const entity = graph.entities.find(e => e.name === 'Entity1');
     expect(entity).toBeDefined();
     expect(entity!.confidence).toBe(1.0); // Default confidence
@@ -223,7 +223,7 @@ describe('Save Memory Handler - Integration Tests', () => {
     expect(result.success).toBe(true);
     
     // Verify custom values were applied
-    const graph = await manager.readGraph();
+    const graph = await manager.readGraph('test-thread-006');
     const entity = graph.entities.find(e => e.name === 'Entity1');
     expect(entity).toBeDefined();
     expect(entity!.confidence).toBe(0.8);
@@ -257,7 +257,7 @@ describe('Save Memory Handler - Integration Tests', () => {
 
     expect(result.success).toBe(true);
     
-    const graph = await manager.readGraph();
+    const graph = await manager.readGraph('test-thread-007');
     
     // Should have relations in both directions
     const parentToChild = graph.relations.some(r => 
@@ -419,7 +419,7 @@ describe('Save Memory Handler - Integration Tests', () => {
     expect(secondResult.created.entities).toBe(1);
 
     // Verify the graph contains both entities and their relation
-    const graph = await manager.readGraph();
+    const graph = await manager.readGraph('test-thread-incremental');
     expect(graph.entities.some(e => e.name === 'ServiceA')).toBe(true);
     expect(graph.entities.some(e => e.name === 'ServiceB')).toBe(true);
     expect(graph.relations.some(r => 

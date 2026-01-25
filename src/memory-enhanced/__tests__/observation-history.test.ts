@@ -32,7 +32,7 @@ describe('Observation Versioning - getObservationHistory', () => {
 
   it('should throw error for non-existent entity', async () => {
     await expect(
-      manager.getObservationHistory('NonExistent', 'obs-123')
+      manager.getObservationHistory('NonExistent', 'obs-123', 'test-thread')
     ).rejects.toThrow("Entity 'NonExistent' not found");
   });
 
@@ -58,7 +58,7 @@ describe('Observation Versioning - getObservationHistory', () => {
     await manager.createEntities(entities);
 
     await expect(
-      manager.getObservationHistory('TestEntity', 'non-existent-obs')
+      manager.getObservationHistory('TestEntity', 'non-existent-obs', 'test-thread')
     ).rejects.toThrow("Observation 'non-existent-obs' not found");
   });
 
@@ -83,7 +83,7 @@ describe('Observation Versioning - getObservationHistory', () => {
 
     await manager.createEntities(entities);
 
-    const history = await manager.getObservationHistory('TestEntity', 'obs-standalone');
+    const history = await manager.getObservationHistory('TestEntity', 'obs-standalone', 'test-thread');
 
     expect(history).toHaveLength(1);
     expect(history[0].content).toBe('Standalone observation');
@@ -132,7 +132,7 @@ describe('Observation Versioning - getObservationHistory', () => {
     await manager.createEntities(entities);
 
     // Start from v1 and get full history
-    const history = await manager.getObservationHistory('TestEntity', 'obs-v1');
+    const history = await manager.getObservationHistory('TestEntity', 'obs-v1', 'test-thread');
 
     expect(history).toHaveLength(3);
     expect(history[0].id).toBe('obs-v1');
@@ -182,7 +182,7 @@ describe('Observation Versioning - getObservationHistory', () => {
     await manager.createEntities(entities);
 
     // Start from v3 and get full history
-    const history = await manager.getObservationHistory('TestEntity', 'obs-v3');
+    const history = await manager.getObservationHistory('TestEntity', 'obs-v3', 'test-thread');
 
     expect(history).toHaveLength(3);
     expect(history[0].id).toBe('obs-v1');
@@ -232,7 +232,7 @@ describe('Observation Versioning - getObservationHistory', () => {
     await manager.createEntities(entities);
 
     // Start from v2 and get full history
-    const history = await manager.getObservationHistory('TestEntity', 'obs-v2');
+    const history = await manager.getObservationHistory('TestEntity', 'obs-v2', 'test-thread');
 
     expect(history).toHaveLength(3);
     expect(history[0].id).toBe('obs-v1');
@@ -272,7 +272,7 @@ describe('Observation Versioning - getObservationHistory', () => {
 
     await manager.createEntities(entities);
 
-    const history = await manager.getObservationHistory('TestEntity', 'obs-v1');
+    const history = await manager.getObservationHistory('TestEntity', 'obs-v1', 'test-thread');
 
     // Should be in version chain order (v1 -> v2)
     expect(history[0].id).toBe('obs-v1');
@@ -304,7 +304,7 @@ describe('Observation Versioning - getObservationHistory', () => {
 
     await manager.createEntities(entities);
 
-    const history = await manager.getObservationHistory('TestEntity', 'obs-full');
+    const history = await manager.getObservationHistory('TestEntity', 'obs-full', 'test-thread');
 
     expect(history[0]).toHaveProperty('id');
     expect(history[0]).toHaveProperty('content');

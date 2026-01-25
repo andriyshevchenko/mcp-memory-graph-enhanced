@@ -86,7 +86,7 @@ describe('Storage Abstraction', () => {
       const entity = createEntityWithObservation('TestEntity', 'test observation');
       
       await manager.createEntities([entity]);
-      const graph = await manager.readGraph();
+      const graph = await manager.readGraph('thread-001');
       
       expect(graph.entities).toHaveLength(1);
       expect(graph.entities[0].name).toBe('TestEntity');
@@ -105,7 +105,7 @@ describe('Storage Abstraction', () => {
       const entity = createEntityWithObservation('TestEntity', 'test observation');
       
       await manager.createEntities([entity]);
-      const graph = await manager.readGraph();
+      const graph = await manager.readGraph('thread-001');
       
       expect(graph.entities).toHaveLength(1);
       expect(graph.entities[0].name).toBe('TestEntity');
@@ -119,7 +119,7 @@ describe('Storage Abstraction', () => {
       await manager.createEntities([alice, bob]);
       await manager.createRelations([relation]);
       
-      const graph = await manager.readGraph();
+      const graph = await manager.readGraph('thread-001');
       
       expect(graph.entities).toHaveLength(2);
       expect(graph.relations).toHaveLength(1);
@@ -132,11 +132,11 @@ describe('Storage Abstraction', () => {
       const entity2 = createTestEntity('Entity2');
 
       await manager.createEntities([entity1]);
-      const graph1 = await manager.readGraph();
+      const graph1 = await manager.readGraph('thread-001');
       expect(graph1.entities).toHaveLength(1);
 
       await manager.createEntities([entity2]);
-      const graph2 = await manager.readGraph();
+      const graph2 = await manager.readGraph('thread-001');
       expect(graph2.entities).toHaveLength(2);
     });
   });

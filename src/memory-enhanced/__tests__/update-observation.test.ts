@@ -53,7 +53,7 @@ describe('updateObservation', () => {
     expect(updatedObs.importance).toBe(TEST_CONSTANTS.DEFAULT_IMPORTANCE);
 
     // Verify the old observation is linked
-    const graph = await manager.readGraph();
+    const graph = await manager.readGraph(TEST_CONSTANTS.THREAD_ID);
     const entity = graph.entities.find(e => e.name === TEST_CONSTANTS.ENTITY_NAME);
     expect(entity).toBeDefined();
     
@@ -168,7 +168,7 @@ describe('updateObservation', () => {
     );
 
     // Assert - Verify the chain
-    const graph = await manager.readGraph();
+    const graph = await manager.readGraph(TEST_CONSTANTS.THREAD_ID);
     const entity = graph.entities.find(e => e.name === TEST_CONSTANTS.ENTITY_NAME);
     expect(entity!.observations).toHaveLength(3);
 
@@ -184,7 +184,7 @@ describe('updateObservation', () => {
     expect(obsV3!.superseded_by).toBeUndefined();
 
     // Test getObservationHistory to ensure the chain works
-    const history = await manager.getObservationHistory(TEST_CONSTANTS.ENTITY_NAME, 'obs-v1');
+    const history = await manager.getObservationHistory(TEST_CONSTANTS.ENTITY_NAME, 'obs-v1', TEST_CONSTANTS.THREAD_ID);
     expect(history).toHaveLength(3);
     expect(history[0].content).toBe('Version 1');
     expect(history[1].content).toBe('Version 2');
@@ -199,7 +199,7 @@ describe('updateObservation', () => {
     await manager.updateObservation(createUpdateParams());
 
     // Assert
-    const graph = await manager.readGraph();
+    const graph = await manager.readGraph(TEST_CONSTANTS.THREAD_ID);
     const entity = graph.entities.find(e => e.name === TEST_CONSTANTS.ENTITY_NAME);
     expect(entity!.timestamp).toBe(TEST_CONSTANTS.UPDATE_TIMESTAMP);
   });

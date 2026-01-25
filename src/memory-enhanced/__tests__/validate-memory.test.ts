@@ -46,7 +46,7 @@ describe('Validate Memory Tool', () => {
       expect(result.errors.length).toBe(0);
 
       // Verify no entities were actually saved
-      const graph = await manager.readGraph();
+      const graph = await manager.readGraph('thread-1');
       expect(graph.entities.length).toBe(0);
     });
 
