@@ -99,8 +99,6 @@ export async function queryNodes(
   const filteredEntities = graph.entities.filter(e => {
     // Thread isolation filter - must match
     if (e.agentThreadId !== threadId) return false;
-    // Thread isolation filter - must match
-    if (e.agentThreadId !== threadId) return false;
     
     // Optional filters below
     if (!filters) return true;
