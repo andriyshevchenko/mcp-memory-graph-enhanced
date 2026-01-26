@@ -300,6 +300,9 @@ cython_debug/
 # Memory data directories
 memory-data/
 
+# Test files
+*_Test.txt
+
 # Backup files
 *.backup
 

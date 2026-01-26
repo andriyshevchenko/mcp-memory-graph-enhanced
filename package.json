@@ -5,8 +5,8 @@
   "description": "Memory-Enhanced MCP Server - Persistent knowledge graph with agent threading",
   "license": "MIT",
   "author": "Andriy Shevchenko",
-  "homepage": "https://modelcontextprotocol.io",
-  "bugs": "https://github.com/modelcontextprotocol/servers/issues",
+  "homepage": "https://github.com/andriyshevchenko/atomic-memory-mcp",
+  "bugs": "https://github.com/andriyshevchenko/atomic-memory-mcp/issues",
   "type": "module",
   "workspaces": [
     "src/*"
