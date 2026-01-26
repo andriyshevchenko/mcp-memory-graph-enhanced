@@ -26,17 +26,17 @@ Atomic Memory MCP Server provides:
 
 ```
 ┌─────────────┐      ┌─────────────┐      ┌─────────────┐
-│   Chat 1    │      │   Chat 2    │      │   Chat 3    │
-│  Main Task  │      │  Supabase   │      │  Frontend   │
+│   Chat 1       │      │   Chat 2      │      │   Chat 3       │
+│  Main Task     │      │  Supabase     │      │  Frontend      │
 └──────┬──────┘      └──────┬──────┘      └──────┬──────┘
-       │                    │                    │
-       │     Save Facts     │     Read Context   │
+       │                        │                       │
+       │     Save Facts         │     Read Context      │
        └────────────────────┼────────────────────┘
-                            │
+                                │
                     ┌───────▼────────┐
-                    │  Memory Graph  │
-                    │   (Neo4j or    │
-                    │     JSONL)     │
+                    │  Memory Graph.     │
+                    │   (Neo4j or        │
+                    │     JSONL)         │
                     └────────────────┘
 ```
 
@@ -124,41 +124,23 @@ docker-compose up
 
 Access Neo4j Browser at http://localhost:7474 to visualize your knowledge graph.
 
-## 📖 Usage Guide
-
-### Core Concept: Atomic Facts
-
-Every piece of information should be **as atomic as possible**:
-
-✅ **Good Examples:**
-- "Project name is TaskMaster"
-- "Backend uses FastAPI framework"
-- "Database is PostgreSQL 15"
-- "Authentication method is JWT"
-
-❌ **Bad Examples:**
-- "The project TaskMaster uses FastAPI for backend, PostgreSQL for database, and JWT for authentication" (too broad)
-
 ### Typical Workflow
 
 #### 1. Regular Snapshots During Work
 
 **Prompt to use regularly:**
 ```
-Please save a snapshot of our current conversation progress to memory. 
+Capture a 100% comprehensive snapshot of current conversation state to memory.
 Include key decisions, configurations, and important context we've discussed.
+Validate memory first. Don't store all at once, apply incremental updates
 ```
 
 #### 2. Restoring Context in New Chat
 
 **Prompt for new agent/chat:**
 ```
-Please read the memory graph and give me a summary of:
-1. The current project we're working on
-2. Key decisions and configurations made so far
-3. What still needs to be done
-
-Focus on information relevant to [specific task].
+Restore full context for thread "linkedin-outreach-mvp" using memory tools.
+Next proceed with [specific task].
 ```
 
 #### 3. Delegating Tasks
@@ -361,29 +343,29 @@ The real power of Atomic Memory MCP is enabling seamless work across dozens of a
 
 ```
                          ┌──────────────────┐
-                         │   Main Project   │
-                         │   Coordination   │
+                         │   Main Project.     │
+                         │   Coordination      │
                          └────────┬─────────┘
-                                  │
+                                    │
                     ┌─────────────┼─────────────┐
-                    │             │             │
+                    │                │               │
             ┌───────▼──────┐ ┌───▼─────┐ ┌────▼──────┐
-            │   Backend    │ │Frontend │ │   DevOps  │
-            │    Agent     │ │  Agent  │ │   Agent   │
+            │   Backend       │ │Frontend.  │ │   DevOps     │
+            │    Agent        │ │  Agent.   │ │   Agent      │
             └───────┬──────┘ └───┬─────┘ └────┬──────┘
-                    │            │            │
+                      │              │              │
          ┌──────────┼────────────┼────────────┼──────────┐
-         │          │            │            │          │
+         │            │              │               │           │
     ┌────▼───┐ ┌───▼────┐  ┌───▼────┐  ┌───▼────┐ ┌───▼────┐
-    │Database│ │  API   │  │  UI    │  │ Docker │ │   CI   │
-    │ Agent  │ │ Agent  │  │ Agent  │  │ Agent  │ │ Agent  │
-    └────┬───┘ └───┬────┘  └───┬────┘  └───┬────┘ └───┬────┘
-         │         │           │           │          │
-         └─────────┴───────────┴───────────┴──────────┘
-                              │
+    │Database. | │  API     │  │  UI      │   │ Docker   │ │   CI     │
+    │ Agent    │ │ Agent    │  │ Agent    │   │ Agent    │ │ Agent    │
+    └────┬───┘ └───┬────┘  └───┬────┘    └───┬────┘ └───┬────
+          │           │             │              │            │
+          └─────────┴───────────┴───────────┴──────────┘
+                                 │
                     ┌─────────▼──────────┐
-                    │   Shared Memory    │
-                    │   Knowledge Graph  │
+                    │   Shared Memory        │
+                    │   Knowledge Graph      │
                     └────────────────────┘
 ```
 
