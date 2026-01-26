@@ -5,6 +5,58 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2026-01-26
+
+### Added
+
+#### Documentation
+- **Comprehensive README.md** - Complete project documentation including:
+  - Clear explanation of the problem (context loss in long conversations) and solution
+  - Visual diagrams showing multi-agent delegation flow
+  - Installation instructions for Claude Desktop and VSCode with npx
+  - Detailed usage guide with prompt examples for:
+    - Regular snapshots during work
+    - Restoring context in new chats
+    - Delegating tasks to other agents
+  - Complete API documentation for all 20+ available tools
+  - Best practices for atomic facts and memory management
+  - Real-world examples for project setup, progress tracking, and delegation
+  - Multi-agent collaboration patterns (beyond just code)
+  - Data model documentation (Entity, Relation, Observation schemas)
+  - Development setup and storage backend information
+
+- **MIT LICENSE** - Added standard MIT License file
+
+#### Usage Examples
+- **Prompt templates** for:
+  - Starting new projects with memory
+  - Taking conversation snapshots
+  - Delegating tasks with context
+  - Restoring context in new agents/chats
+  - Checking project progress
+
+#### Visual Documentation
+- Multi-agent delegation flow diagram showing how dozens of agents can collaborate
+- Cross-session memory sharing diagram
+- Hierarchical task breakdown visualization
+
+### Changed
+- **Version bumped** from 3.0.0 to 3.1.0 (minor version)
+- Enhanced package.json metadata for better npm discoverability
+
+### Documentation Improvements
+- Clarified that memory is NOT limited to code - can be used for writing, research, planning, learning, creative work
+- Emphasized "atomic facts" principle throughout documentation
+- Added concrete examples of good vs bad observation formats
+- Included Neo4j Browser visualization capabilities
+- Documented both JSONL and Neo4j storage options
+
+### Use Cases Highlighted
+- **Cross-chat coordination** - Share context between multiple Claude conversations
+- **Task delegation** - Hand off subtasks to specialized agents with full context
+- **Long conversation management** - Overcome context window limits
+- **Multi-agent workflows** - Coordinate dozens of agents working on different parts of a project
+
 ## [2.3.1] - 2026-01-22
 
 ### Performance

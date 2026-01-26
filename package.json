@@ -1,7 +1,7 @@
 {
   "name": "servers",
   "private": true,
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "Memory-Enhanced MCP Server - Persistent knowledge graph with agent threading",
   "license": "MIT",
   "author": "Andriy Shevchenko",
