@@ -417,7 +417,8 @@ server.registerTool(
     }
   },
   async (input: any) => {
-    const graph = await knowledgeGraphManager.readGraph(input.threadId);
+    const minImportance = input.minImportance ?? 0.1;
+    const graph = await knowledgeGraphManager.readGraph(input.threadId, minImportance);
     return {
       content: [{ type: "text" as const, text: JSON.stringify(graph, null, 2) }],
       structuredContent: { ...graph }

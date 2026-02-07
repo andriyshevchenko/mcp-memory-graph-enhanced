@@ -14,7 +14,8 @@ export const ObservationSchema = z.object({
   superseded_by: z.string().optional().describe("ID of observation that supersedes this one"),
   agentThreadId: z.string().describe("Thread that created this observation"),
   confidence: z.number().min(0).max(1).optional().describe("Confidence in accuracy (0-1, optional, inherits from entity if not set)"),
-  importance: z.number().min(0).max(1).optional().describe("Importance for memory integrity (0-1, optional, inherits from entity if not set)")
+  importance: z.number().min(0).max(1).optional().describe("Importance for memory integrity (0-1, optional, inherits from entity if not set)"),
+  status: z.literal('ARCHIVED').optional().describe("Status indicator for observations with low importance but above minImportance threshold")
 });
 
 // Schema for existing tools
@@ -25,7 +26,8 @@ export const EntitySchema = z.object({
   agentThreadId: z.string().describe("Agent thread that created/modified this entity"),
   timestamp: z.string().describe("ISO 8601 timestamp of creation/modification"),
   confidence: z.number().min(0).max(1).describe("Confidence in the accuracy of this entity (0-1)"),
-  importance: z.number().min(0).max(1).describe("Importance for memory integrity if lost: 0 (not important) to 1 (critical)")
+  importance: z.number().min(0).max(1).describe("Importance for memory integrity if lost: 0 (not important) to 1 (critical)"),
+  status: z.literal('ARCHIVED').optional().describe("Status indicator for entities with low importance but above minImportance threshold")
 });
 
 export const RelationSchema = z.object({
@@ -35,7 +37,8 @@ export const RelationSchema = z.object({
   agentThreadId: z.string().describe("Agent thread that created/modified this relation"),
   timestamp: z.string().describe("ISO 8601 timestamp of creation/modification"),
   confidence: z.number().min(0).max(1).describe("Confidence in the accuracy of this relation (0-1)"),
-  importance: z.number().min(0).max(1).describe("Importance for memory integrity if lost: 0 (not important) to 1 (critical)")
+  importance: z.number().min(0).max(1).describe("Importance for memory integrity if lost: 0 (not important) to 1 (critical)"),
+  status: z.literal('ARCHIVED').optional().describe("Status indicator for relations with low importance but above minImportance threshold")
 });
 
 // Schema for save_memory tool (Section 1 of spec)
@@ -170,7 +173,8 @@ export const UpdateObservationOutputSchema = z.object({
 
 // Schema for read_graph tool
 export const ReadGraphInputSchema = z.object({
-  threadId: z.string().min(1).describe("Thread ID for this conversation/project")
+  threadId: z.string().min(1).describe("Thread ID for this conversation/project"),
+  minImportance: z.number().min(0).max(1).optional().default(0.1).describe("Minimum importance threshold for filtering entities/relations (default: 0.1). Items below this threshold are excluded. Items between minImportance and 0.1 are marked as ARCHIVED.")
 });
 
 // Schema for search_nodes tool

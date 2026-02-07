@@ -109,9 +109,9 @@ export class KnowledgeGraphManager {
   }
 
   // Graph Reading Operations
-  async readGraph(threadId: string): Promise<KnowledgeGraph> {
+  async readGraph(threadId: string, minImportance: number = 0.1): Promise<KnowledgeGraph> {
     await this.ensureInitialized();
-    return GraphReader.readGraph(this.storage, threadId);
+    return GraphReader.readGraph(this.storage, threadId, minImportance);
   }
 
   // Search Operations
