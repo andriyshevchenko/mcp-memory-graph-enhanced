@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0] - 2026-02-07
+
+### Added
+
+#### Importance-Based Filtering
+- **`minImportance` parameter for read_graph tool** - New filtering capability with ARCHIVED status:
+  - Optional parameter with default value of 0.1
+  - Filters out entities, relations, and observations with importance below threshold
+  - Items with importance >= minImportance and < 0.1 are marked with `status: 'ARCHIVED'`
+  - ARCHIVED status signals data that may be outdated or less relevant
+  - Observations inherit importance from parent entity when not explicitly set
+  - Filtering cascades: low-importance observations are removed even from high-importance entities
+
+#### Type System Updates
+- **Added `status` field** to Entity, Relation, and Observation interfaces:
+  - Optional field with literal type `'ARCHIVED'`
+  - Included in TypeScript types and Zod schemas
+  - Backward compatible - field only present when applicable
+
+### Changed
+- **Version bumped** from 3.1.0 to 3.2.0 (minor version)
+- Enhanced `read_graph` tool with importance-based filtering logic
+- Updated schema descriptions to clarify ARCHIVED status behavior
+
+### Technical Details
+- Default minImportance of 0.1 filters out low-value data while maintaining historical context
+- The 0.1 threshold for ARCHIVED status is a constant, separating filtering policy (user-controlled) from data quality semantics (system-defined)
+- Comprehensive test coverage with 9 new tests covering filtering, ARCHIVED status, and observation inheritance
+- All 240 tests passing with no breaking changes
+
+### Use Cases
+- **Memory Management**: Reduce payload size by filtering low-importance items
+- **Data Quality**: Identify potentially outdated information via ARCHIVED status
+- **Progressive Disclosure**: Show high-importance items by default, load archived items on demand
+- **Historical Context**: Access older data with custom minImportance thresholds
+
 ## [3.1.0] - 2025-01-26
 
 ### Added
