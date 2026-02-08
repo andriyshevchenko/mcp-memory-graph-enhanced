@@ -6,9 +6,37 @@ import { KnowledgeGraph, Entity, Relation, Observation } from '../types.js';
 import { IStorageAdapter } from '../storage-interface.js';
 
 /**
+ * Default threshold for marking items as ARCHIVED
+ * Items with importance below this but >= minImportance get ARCHIVED status
+ */
+export const ARCHIVED_THRESHOLD = 0.1;
+
+/**
+ * Check if an observation has a status field
+ */
+function hasStatus(obs: Observation): boolean {
+  return obs.status !== undefined;
+}
+
+/**
+ * Check if an entity or any of its observations has a status field
+ */
+function entityHasStatus(entity: Entity): boolean {
+  return entity.status !== undefined || entity.observations.some(hasStatus);
+}
+
+/**
+ * Check if a relation has a status field
+ */
+function relationHasStatus(relation: Relation): boolean {
+  return relation.status !== undefined;
+}
+
+/**
  * Strip status from an observation (used to clean persisted status values)
  */
 function stripObservationStatus(obs: Observation): Observation {
+  if (!hasStatus(obs)) return obs;
   const { status: _oldStatus, ...obsWithoutStatus } = obs;
   return obsWithoutStatus;
 }
@@ -17,6 +45,8 @@ function stripObservationStatus(obs: Observation): Observation {
  * Strip status from an entity and its observations (used to clean persisted status values)
  */
 function stripEntityStatus(entity: Entity): Entity {
+  if (!entityHasStatus(entity)) return entity;
+  
   const { status: _oldStatus, ...entityWithoutStatus } = entity;
   return {
     ...entityWithoutStatus,
@@ -28,14 +58,22 @@ function stripEntityStatus(entity: Entity): Entity {
  * Strip status from a relation (used to clean persisted status values)
  */
 function stripRelationStatus(relation: Relation): Relation {
+  if (!relationHasStatus(relation)) return relation;
   const { status: _oldStatus, ...relationWithoutStatus } = relation;
   return relationWithoutStatus;
 }
 
 /**
  * Strip status from all entities and relations in a graph (used to clean persisted status values)
+ * Optimized to avoid unnecessary deep copies when no status fields exist
  */
 export function stripGraphStatus(graph: KnowledgeGraph): KnowledgeGraph {
+  // Check if any items have status fields - if not, return as-is
+  const hasAnyStatus = graph.entities.some(entityHasStatus) || graph.relations.some(relationHasStatus);
+  if (!hasAnyStatus) {
+    return graph;
+  }
+  
   return {
     entities: graph.entities.map(stripEntityStatus),
     relations: graph.relations.map(stripRelationStatus),
@@ -49,7 +87,7 @@ export function stripGraphStatus(graph: KnowledgeGraph): KnowledgeGraph {
 export async function readGraph(
   storage: IStorageAdapter, 
   threadId: string,
-  minImportance: number = 0.1
+  minImportance: number = ARCHIVED_THRESHOLD
 ): Promise<KnowledgeGraph> {
   const graph = await storage.loadGraph();
   
@@ -58,9 +96,9 @@ export async function readGraph(
     .filter(e => e.agentThreadId === threadId)
     .filter(e => e.importance >= minImportance)
     .map(entity => {
-      // Add ARCHIVED status if importance is less than 0.1 but >= minImportance.
+      // Add ARCHIVED status if importance is less than ARCHIVED_THRESHOLD but >= minImportance.
       // Otherwise, explicitly clear status so pre-existing values don't leak through.
-      const isArchived = entity.importance < 0.1 && entity.importance >= minImportance;
+      const isArchived = entity.importance < ARCHIVED_THRESHOLD && entity.importance >= minImportance;
       const { status: _oldStatus, ...entityWithoutStatus } = entity;
       const entityWithStatus = {
         ...entityWithoutStatus,
@@ -76,7 +114,7 @@ export async function readGraph(
         })
         .map(obs => {
           const obsImportance = obs.importance !== undefined ? obs.importance : entity.importance;
-          const isObsArchived = obsImportance < 0.1 && obsImportance >= minImportance;
+          const isObsArchived = obsImportance < ARCHIVED_THRESHOLD && obsImportance >= minImportance;
           const { status: _oldObsStatus, ...obsWithoutStatus } = obs;
           return {
             ...obsWithoutStatus,
@@ -99,9 +137,9 @@ export async function readGraph(
       r.importance >= minImportance
     )
     .map(relation => {
-      // Add ARCHIVED status if importance is less than 0.1 but >= minImportance.
+      // Add ARCHIVED status if importance is less than ARCHIVED_THRESHOLD but >= minImportance.
       // Otherwise, explicitly clear status so pre-existing values don't leak through.
-      const isArchived = relation.importance < 0.1 && relation.importance >= minImportance;
+      const isArchived = relation.importance < ARCHIVED_THRESHOLD && relation.importance >= minImportance;
       const { status: _oldStatus, ...relationWithoutStatus } = relation;
       return {
         ...relationWithoutStatus,

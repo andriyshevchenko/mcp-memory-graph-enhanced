@@ -3,6 +3,7 @@
  */
 
 import { z } from "zod";
+import { ARCHIVED_THRESHOLD } from "./queries/graph-reader.js";
 
 // Schema for Observation with versioning support
 export const ObservationSchema = z.object({
@@ -19,7 +20,7 @@ export const ObservationSchema = z.object({
 });
 
 // Input schema for observations (excludes status field which is computed)
-export const ObservationInputSchema = ObservationSchema.omit({ status: true });
+export const ObservationInputSchema = ObservationSchema.omit({ status: true }).strict();
 
 // Schema for existing tools
 export const EntitySchema = z.object({
@@ -36,7 +37,7 @@ export const EntitySchema = z.object({
 // Input schema for entities (excludes status field which is computed, uses input observations)
 export const EntityInputSchema = EntitySchema.omit({ status: true, observations: true }).extend({
   observations: z.array(ObservationInputSchema).describe("Versioned observations about this entity")
-});
+}).strict();
 
 export const RelationSchema = z.object({
   from: z.string().describe("Source entity name"),
@@ -50,7 +51,7 @@ export const RelationSchema = z.object({
 });
 
 // Input schema for relations (excludes status field which is computed)
-export const RelationInputSchema = RelationSchema.omit({ status: true });
+export const RelationInputSchema = RelationSchema.omit({ status: true }).strict();
 
 // Schema for save_memory tool (Section 1 of spec)
 export const SaveMemoryRelationSchema = z.object({
@@ -185,7 +186,7 @@ export const UpdateObservationOutputSchema = z.object({
 // Schema for read_graph tool
 export const ReadGraphInputSchema = z.object({
   threadId: z.string().min(1).describe("Thread ID for this conversation/project"),
-  minImportance: z.number().min(0).max(1).optional().default(0.1).describe("Minimum importance threshold (0-1). Items with importance below this value are excluded. Items with importance between minImportance and 0.1 are marked as ARCHIVED. Default: 0.1")
+  minImportance: z.number().min(0).max(1).optional().default(ARCHIVED_THRESHOLD).describe(`Minimum importance threshold (0-1). Items with importance below this value are excluded. Items with importance between minImportance and ${ARCHIVED_THRESHOLD} are marked as ARCHIVED. Default: ${ARCHIVED_THRESHOLD}`)
 });
 
 // Schema for search_nodes tool
