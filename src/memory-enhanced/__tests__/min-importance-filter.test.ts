@@ -5,7 +5,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { readGraph } from '../lib/queries/graph-reader.js';
 import { IStorageAdapter } from '../lib/storage-interface.js';
-import { KnowledgeGraph, Entity, Relation } from '../lib/types.js';
+import { KnowledgeGraph } from '../lib/types.js';
 
 // Mock storage adapter
 class MockStorageAdapter implements IStorageAdapter {

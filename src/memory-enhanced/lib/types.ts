@@ -13,7 +13,7 @@ export interface Observation {
   agentThreadId: string;   // Thread that created this observation
   confidence?: number;     // 0-1: confidence in accuracy (optional, inherits from entity if not set)
   importance?: number;     // 0-1: importance for memory integrity (optional, inherits from entity if not set)
-  status?: string;         // Status indicator (e.g., "ARCHIVED" for low-importance items)
+  status?: 'ARCHIVED';     // Status indicator - set to 'ARCHIVED' for low-importance items
 }
 
 // Enhanced entity with metadata
@@ -25,7 +25,7 @@ export interface Entity {
   timestamp: string;
   confidence: number;
   importance: number; // 0-1: importance for memory integrity (0=not important, 1=critical)
-  status?: string;     // Status indicator (e.g., "ARCHIVED" for low-importance items)
+  status?: 'ARCHIVED';     // Status indicator - set to 'ARCHIVED' for low-importance items
 }
 
 // Enhanced relation with metadata
@@ -37,7 +37,7 @@ export interface Relation {
   timestamp: string;
   confidence: number;
   importance: number; // 0-1: importance for memory integrity (0=not important, 1=critical)
-  status?: string;     // Status indicator (e.g., "ARCHIVED" for low-importance items)
+  status?: 'ARCHIVED';     // Status indicator - set to 'ARCHIVED' for low-importance items
 }
 
 export interface KnowledgeGraph {
