@@ -125,10 +125,10 @@ export async function readGraph(
       };
       
       // Process observations: filter by importance and add ARCHIVED status
-      // Defensive: handle potential legacy string observations by skipping them
+      // Defensive: handle potential legacy string observations
       entityWithStatus.observations = entity.observations
         .filter(obs => {
-          // Skip if not an Observation object (defensive against legacy data)
+          // Keep legacy string observations (defensive against legacy data)
           if (typeof obs !== 'object' || obs === null) return true;
           
           // Use observation importance if set, otherwise inherit from entity
@@ -136,7 +136,7 @@ export async function readGraph(
           return obsImportance >= minImportance;
         })
         .map(obs => {
-          // Pass through if not an Observation object (defensive against legacy data)
+          // Pass through legacy string observations unchanged
           if (typeof obs !== 'object' || obs === null) return obs;
           
           const obsImportance = obs.importance !== undefined ? obs.importance : entity.importance;
