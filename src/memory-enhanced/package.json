@@ -1,6 +1,6 @@
 {
   "name": "server-memory-enhanced",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "Persistent memory for long conversations - MCP server for knowledge graph with atomic facts, cross-chat memory sharing, and multi-agent delegation",
   "license": "MIT",
   "mcpName": "io.github.modelcontextprotocol/server-memory-enhanced",

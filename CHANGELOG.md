@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0] - 2026-02-08
+
+### Added
+
+#### Importance-Based Filtering for read_graph
+- **minImportance parameter** - New optional parameter for `read_graph` tool (default: 0.1)
+  - Filters entities, relations, and observations based on importance threshold
+  - Items with importance below minImportance are excluded from results
+  - Items with importance between minImportance and 0.1 are marked with `status: "ARCHIVED"`
+  - Observations inherit entity importance when not explicitly set
+  
+**Use Cases:**
+- **Focus on current data**: Default behavior (minImportance=0.1) excludes outdated/low-priority items
+- **Archive mode**: Lower minImportance (e.g., 0.05) includes archived items marked with ARCHIVED status
+- **Full history**: Set minImportance=0 to retrieve all items regardless of importance
+- **Custom thresholds**: Adjust minImportance based on context needs (e.g., 0.3 for critical-only data)
+
+**Technical Details:**
+- Added optional `status` field to Entity, Relation, and Observation types/schemas
+- Enhanced graph-reader.ts with importance filtering and ARCHIVED status marking
+- Comprehensive test coverage with 9 new test cases validating all filtering scenarios
+- Backward compatible: existing code continues to work with default behavior
+
 ## [3.1.0] - 2025-01-26
 
 ### Added
